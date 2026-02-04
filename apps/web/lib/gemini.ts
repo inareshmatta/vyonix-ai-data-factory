@@ -11,7 +11,7 @@ if (!apiKey) {
 const genAI = new GoogleGenerativeAI(apiKey || "");
 
 
-// Vyonix Intelligence Engine (Hackathon Edition)
+// Vyonix Intelligence Engine - Proprietary Edition
 // JSON mode model for structured outputs (text, vision)
 const model = genAI.getGenerativeModel({
     model: "gemini-3-flash-preview",

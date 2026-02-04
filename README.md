@@ -98,6 +98,19 @@ Vyonix Studio is built for professional service providers.
 
 ---
 
+## 📜 License & Intellectual Property
+
+**Vyonix Studio is PROPRIETARY software.** 
+
+This project is NOT open-source. All rights are reserved by **Naresh Matta**. 
+*   **Commercial Use**: Requires an explicit commercial license.
+*   **Redistribution**: Redistribution of source code or compiled binaries is strictly prohibited.
+*   **Modifications**: Derivative works are not permitted without written consent.
+
+For investment, acquisition, or enterprise licensing, please contact **VibeDev Naresh Matta**.
+
+---
+
 ### Developed with ❤️ by **VibeDev Naresh Matta**
 *Empowering the next generation of Multimodal Intelligence.*
 
