@@ -252,8 +252,8 @@ export default function NLPStudio() {
             {/* Header */}
             <div className="h-16 bg-[#1e293b] border-b border-slate-700/50 flex items-center justify-between px-6 shadow-xl z-30">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                        <Layers className="text-white" size={22} />
+                    <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20 text-xl">
+                        🌌
                     </div>
                     <div>
                         <h1 className="font-black text-white text-lg tracking-tight flex items-center gap-2">

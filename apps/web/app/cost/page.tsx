@@ -47,8 +47,8 @@ export default function FinancialConsole() {
                     <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/50 border border-slate-200/60 overflow-hidden">
                         <div className="p-10">
                             <div className="flex items-center gap-4 mb-10">
-                                <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
-                                    <PieChart size={24} />
+                                <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/20 text-2xl">
+                                    🌌
                                 </div>
                                 <div>
                                     <h2 className="text-lg font-black text-slate-800 tracking-tight">Enterprise Savings Calculator</h2>

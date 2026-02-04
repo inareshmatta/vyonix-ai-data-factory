@@ -39,8 +39,8 @@ export default function Sidebar() {
     return (
         <div className="w-64 bg-white border-r border-slate-200 flex flex-col z-10 shadow-[4px_0_24px_rgba(0,0,0,0.02)] h-screen">
             <div className="h-16 flex items-center px-6 border-b border-slate-100 flex-shrink-0">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white mr-3 shadow-lg shadow-blue-500/30">
-                    <Layers size={20} />
+                <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center text-lg mr-3 shadow-lg shadow-indigo-500/20">
+                    🌌
                 </div>
                 <span className="font-bold text-lg tracking-tight text-slate-800">Vyonix <span className="text-blue-600">Studio</span></span>
             </div>

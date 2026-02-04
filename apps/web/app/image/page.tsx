@@ -249,7 +249,7 @@ export default function ImageStudio() {
             {/* Header */}
             <div className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-4 z-20 shadow-sm shrink-0">
                 <div className="flex items-center gap-2">
-                    <ImageIcon className="text-blue-600" size={20} />
+                    <span className="text-xl">🌌</span>
                     <h1 className="font-bold text-slate-800">Vyonix <span className="text-blue-600">Studio</span> <span className="text-xs bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded ml-2 font-mono">VISION PRO</span></h1>
                 </div>
 
