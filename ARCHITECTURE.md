@@ -1,19 +1,20 @@
-# 🏗️ Vyonix Studio: End-to-End Architecture Design
+# 🏗️ Vyonix Studio: High-Fidelity Architecture Design
+### The Blueprint of a Multimodal AI Data Refinery
 
-Vyonix Studio is architected as a **Multimodal Data Refinery**. It leverages a decoupled, service-oriented architecture to handle heavy AI workloads across Audio, Vision, and NLP domains.
+Vyonix Studio is engineered as an industrial-grade **Multimodal Refinery**. It utilizes a decoupled, service-oriented architecture designed to handle massive AI data throughput while maintaining a premium, high-speed user experience.
 
 ---
 
-## 🛰️ High-Level System Architecture
+## 🛰️ Global System Diagram
 
 ```mermaid
 graph TD
-    User((Data Engineer)) --> Frontend[Vyonix Studio UI - Next.js 16]
+    User((Data Engineer)) --> Client[Vyonix Studio UI - Next.js 16]
     
     subgraph "Vyonix Intelligence Layer"
-        Frontend --> API[Next.js API Routes / Edge Functions]
-        API --> Logic[Processing Pipeline]
-        Logic --> GeminiGate[Gemini Adapter / Model Scrubber]
+        Client --> API[Next.js API Routes / Edge Functions]
+        API --> Logic[Semantic Refining & Byte Processing]
+        Logic --> GeminiGate[Gemini Adapter & Model Scrubber]
     end
 
     subgraph "Multimodal AI Engines"
@@ -23,53 +24,51 @@ graph TD
     end
 
     subgraph "Data Storage & Assets"
-        Logic --> FileSys[Local Synthetic Asset Storage]
-        Logic --> Usage[Usage & Financial Tracker]
+        Logic --> FileSys[Local Synthetic FS Store]
+        Logic --> Usage[Usage & Financial Middleware]
     end
 ```
 
 ---
 
-## 🛠️ The Multimodal Engine Core
+## 🛠️ Proprietary Engineering Triumphs
 
-### 1. Audio Intelligence Pipeline
-*   **Ingestion**: Supports BYOD (Bring Your Own Data) via Multipart/FormData.
-*   **Processing**: Audio is uploaded to the **Gemini File API** for long-context analysis.
-*   **Diarization & Sentiment**: Gemini 3 Flash performs a multimodal tonal audit.
-*   **TTS Bridge**: Text is converted to PCM L16 via Gemini 2.5 TTS.
-*   **Header Injection**: A native Node.js buffer stream reconstructs the **WAV/RIFF header** (24kHz, 16-bit Mono) to ensure standard browser playback.
+### 🎥 1. The Audio Reconstruction Engine
+Traditional APIs often return raw, container-less sound waves. Vyonix Studio features a native **Audio Header Injector**:
+*   **PCM Capture**: Intercepts direct L16 PCM data from the `gemini-2.5-flash-preview-tts` model.
+*   **RIFF/WAV Reconstruction**: Manually calculates byte-rate and block-alignment to inject a valid **44-byte WAV header**.
+*   **Fidelity**: Locked at **24,000Hz (Mono, 16-bit)** for standard browser and OS player compatibility.
 
-### 2. Vision Pro Annotation Engine
-*   **Coordinate Normalization**: Translates raw image pixels into a **0-1000 normalized grid**.
-*   **SVG Rendering Layer**: The frontend uses a dynamic SVG overlay to render bounding boxes without mutating the original image.
-*   **Viewport Matrices**: Custom transform-origin logic handles fluid pan/zoom while maintaining annotation alignment.
+### 👁️ 2. Spatial coordinate synchronization
+To handle object detection, we use a **Universal 0-1000 Coordinate System**:
+*   **Normalization**: All AI detections are normalized to a 1000x1000 relative grid.
+*   **Viewport Mapping**: A transformation matrix on the frontend maps these relative coordinates to a dynamic SVG overlay that scales perfectly with the user's **Pan and Zoom** levels.
+*   **Zero-Mutation**: The original dataset remains untouched; all annotations are stored as vectorized metadata.
 
-### 3. NLP & Semantic Refinery
-*   **Chunked Analysis**: Documents are split into logical headers/paragraphs to avoid LLM truncation.
-*   **Mention-Verification**: A dual-layer logic where the AI provides both indices and the `mention` (string).
-*   **Self-Correction**: The UI re-calculates offsets in real-time if a character-count drift is detected between the AI and JavaScript.
-
----
-
-## 📂 Project Structure & Domain Logic
-
-- **`/app/api/ai/`**: The core API backbone. Each subdirectory (audio, image, text) contains specialized pipelines for synthesis and analysis.
-- **`/lib/gemini.ts`**: The central Intelligence Registry. It manages model timeouts (60m+), JSON mode configurations, and security headers.
-- **`/lib/prompts.ts`**: The "Brain" of the factory. Contains the high-fidelity prompt engineering required to force Gemini into strict 0-1000 coordinate output and exact NER tagging.
-- **`/public/synthetic-*`**: Ephemeral storage for generated assets, ensuring low-latency access for the studio preview players.
+### 📝 3. NLP Index Self-Correction (Snapping)
+LLM tokenization often causes "coordinate drift" in text indexing. Vyonix solves this with **Precision Snapping**:
+*   **Intent-Based Extraction**: The AI returns both the character index and the exact `mention` string.
+*   **Local Sync**: If a drift is detected (e.g., highlighting starts mid-word), the UI performs a 20-character fuzzy-search to re-calculate the exact start/end points in the local DOM.
 
 ---
 
-## 🔒 Security & White-Labeling
-The architecture implements a **Model Scrubbing Layer**. Any error or response metadata from the underlying Google APIs is intercepted and re-branded as "Vyonix Intelligence." This ensures that the platform remains a fully white-labeled enterprise solution for Data Service providers.
+## 📂 Industrial Directory Structure
+
+- **`/app/api/ai/`**: Decoupled domain-specific API routes (audio, image, text).
+- **`/lib/usage.ts`**: The financial observability layer tracking token expenditures.
+- **`/lib/prompts.ts`**: A centralized "Brain" repository for strict-mode prompt engineering.
+- **`/public/synthetic-audio/`**: High-speed ephemeral asset storage for generated vocal data.
 
 ---
 
-## 📈 Financial & Observability Layer
-Integrated directly into the API routes is a **Usage Tracking Middleware** (`lib/usage.ts`). It captures:
-- **Token Input/Output**: Directly mapped to financial costs.
-- **Duration/Words/Images**: Metric markers for throughput.
-- **Batch Savings**: Calculates delta between standard API usage and high-efficiency Batch pipelines.
+## 🔒 Enterprise White-Labeling (Model Scrubbing)
+Vyonix Studio is built for professional service providers. An **Interceptor Layer** in our API routes scrubs all references to underlying third-party models. Whether it’s an error message or a metadata field, the output is re-branded as **"Vyonix-Intelligence-Proprietary"**, ensuring a fully white-labeled enterprise profile.
 
 ---
-© 2026 Vyonix Studio. Built for Enterprise Multimodal Data Engineering.
+
+## 👨‍💻 Author & Architect
+**Naresh Matta (VibeDev)**  
+*Lead Architect & AI Systems Engineer*
+
+---
+© 2026 Vyonix Studio. Optimized for the Next Generation of Data Engineering.
