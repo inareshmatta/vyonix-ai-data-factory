@@ -19,7 +19,7 @@ import {
   ShieldCheck,
   Zap
 } from 'lucide-react';
-import { getStats, VyonixStats } from '@/lib/usage';
+import { getStats, VyonixStats, DEFAULT_STATS } from '@/lib/usage';
 
 const MetricCard = ({ title, value, sub, icon: Icon, color, trend }: any) => (
   <div className="bg-white p-6 rounded-[2rem] border border-slate-200/60 shadow-xl shadow-slate-200/20 flex flex-col justify-between hover:translate-y-[-4px] transition-all duration-300 group">
@@ -43,9 +43,12 @@ const MetricCard = ({ title, value, sub, icon: Icon, color, trend }: any) => (
 );
 
 export default function Dashboard() {
-  const [stats, setStats] = useState<VyonixStats>(getStats());
+  const [stats, setStats] = useState<VyonixStats>(DEFAULT_STATS);
 
   useEffect(() => {
+    // Hydrate from storage on client mount
+    setStats(getStats());
+
     const refresh = () => setStats(getStats());
     window.addEventListener('usage-updated', refresh);
     return () => window.removeEventListener('usage-updated', refresh);
@@ -66,7 +69,7 @@ export default function Dashboard() {
             <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30 text-2xl">
               🌌
             </div>
-            Performance Hub
+            Vyonix AI Data Factory Performance Hub
           </h1>
           <p className="text-slate-500 text-sm font-medium mt-2 max-w-md italic">Real-time metrics for Vyonix AI Data Factory Pipeline. Monitoring 3 enterprise-grade intelligence streams.</p>
         </div>

@@ -12,7 +12,7 @@ export interface VyonixStats {
     last_updated: string;
 }
 
-const DEFAULT_STATS: VyonixStats = {
+export const DEFAULT_STATS: VyonixStats = {
     audio_files: 0,
     audio_seconds: 0,
     images_processed: 0,
