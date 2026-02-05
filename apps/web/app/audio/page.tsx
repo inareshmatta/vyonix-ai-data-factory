@@ -20,7 +20,13 @@ import {
     List,
     History,
     CheckCircle2,
-    Database
+    Database,
+    Check,
+    Cloud,
+    MessageSquare,
+    Zap,
+    Coins,
+    Sparkles
 } from 'lucide-react';
 import { trackUsage } from '@/lib/usage';
 import WavesurferPlayer from '@wavesurfer/react';
@@ -35,6 +41,7 @@ interface AudioSegment {
     speaker: string;
     word: string;
     type: 'lexical' | 'filler' | 'event';
+    tags?: string; // Added for manual tagging
 }
 
 interface JobHistory {
@@ -50,10 +57,12 @@ interface QueueItem {
     status: 'pending' | 'processing' | 'completed' | 'error';
     result?: any;
     errorMsg?: string;
+    batchJobId?: string; // Added to track batch job association
 }
 
 // Formats milliseconds to HH:MM:SS.mmm
 const formatMs = (ms: number): string => {
+    if (isNaN(ms)) return "00:00:00.000";
     const totalSeconds = ms / 1000;
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -62,6 +71,21 @@ const formatMs = (ms: number): string => {
 
     const pad = (n: number, len: number = 2) => n.toString().padStart(len, '0');
     return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}.${pad(milliseconds, 3)}`;
+};
+
+const parseTimeToMs = (timeStr: string): number => {
+    try {
+        const parts = timeStr.split(':');
+        if (parts.length < 3) return 0;
+        const hours = parseInt(parts[0]) || 0;
+        const minutes = parseInt(parts[1]) || 0;
+        const secondsParts = parts[2].split('.');
+        const seconds = parseInt(secondsParts[0]) || 0;
+        const ms = secondsParts[1] ? parseInt(secondsParts[1].padEnd(3, '0').slice(0, 3)) : 0;
+        return (hours * 3600000) + (minutes * 60000) + (seconds * 1000) + ms;
+    } catch (e) {
+        return 0;
+    }
 };
 
 const Badge = ({ type }: { type: string }) => {
@@ -91,13 +115,22 @@ export default function AudioStudio() {
 
     // Status
     const [statusMessage, setStatusMessage] = useState<string | null>(null);
+    const [isProcessing, setIsProcessing] = useState(false); // Renamed from isBatchProcessing for single file
+    const [isBatchProcessing, setIsBatchProcessing] = useState(false); // New state for batch job submission
+    const [batchJobs, setBatchJobs] = useState<any[]>([]); // Track batch jobs from API
     const [currentJobId, setCurrentJobId] = useState<string | null>(null);
 
     const [promptVersion, setPromptVersion] = useState<'v1' | 'v2' | 'v3' | 'v4'>('v1');
+    const [taskType, setTaskType] = useState<'word' | 'sentence'>('word'); // Added taskType state
 
-    // Wavesurfer Refs
+
+
+    // Refs
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const wavesurferRef = useRef<any>(null);
     const regionsRef = useRef<any>(null);
+
+    // Waveform State
     const [isPlayerReady, setIsPlayerReady] = useState(false);
     const [audioDuration, setAudioDuration] = useState(0);
     const [currentTime, setCurrentTime] = useState(0);
@@ -108,8 +141,17 @@ export default function AudioStudio() {
         return [TimelinePlugin.create()];
     }, []);
 
+    // Feature State
+    const [showSentiment, setShowSentiment] = useState(false);
+    const [showTTS, setShowTTS] = useState(false);
+    const [sentimentResult, setSentimentResult] = useState<any>(null);
+    const [ttsText, setTtsText] = useState("");
+    const [selectedVoice, setSelectedVoice] = useState("Puck");
+    const [isGeneratingTTS, setIsGeneratingTTS] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
+    const [generatedTTS, setGeneratedTTS] = useState<{ url: string, filename: string, file: File } | null>(null);
+
     // Fetch history on load
-    // Fetch history on load & poll
     useEffect(() => {
         fetchHistory(); // Initial fetch
         const interval = setInterval(fetchHistory, 5000); // Poll every 5s
@@ -131,43 +173,163 @@ export default function AudioStudio() {
 
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [queue, setQueue] = useState<QueueItem[]>([]);
-    const [isBatchProcessing, setIsBatchProcessing] = useState(false);
+
+    // Batch Polling Effect
+    useEffect(() => {
+        const activeBatchJobs = [...new Set(queue.filter(q => q.status === 'processing' && q.batchJobId).map(q => q.batchJobId))];
+
+        if (activeBatchJobs.length === 0) return;
+
+        const pollInterval = setInterval(async () => {
+            for (const jobId of activeBatchJobs) {
+                try {
+                    const res = await fetch(`/api/ai/audio/batch/status?id=${jobId}`);
+                    const data = await res.json();
+
+                    if (data.state === 'SUCCEEDED') {
+                        // Update queue items
+                        setQueue(prev => prev.map(item => {
+                            if (item.batchJobId === jobId) {
+                                // Match by filename if possible
+                                const result = data.results.find((r: any) => r.fileName === item.file.name);
+                                if (result) {
+                                    return {
+                                        ...item,
+                                        status: 'completed',
+                                        result: {
+                                            // Format timestamps back to MS
+                                            data: result.annotations.map((a: any) => ({
+                                                ...a,
+                                                start: parseTimeToMs(a.start),
+                                                end: parseTimeToMs(a.end)
+                                            }))
+                                        }
+                                    };
+                                }
+                                return { ...item, status: 'completed', errorMsg: "Result not found in batch" };
+                            }
+                            return item;
+                        }));
+                        setStatusMessage(`Batch Job ${jobId} Completed!`);
+                    } else if (data.state === 'FAILED') {
+                        setQueue(prev => prev.map(item =>
+                            item.batchJobId === jobId ? { ...item, status: 'error', errorMsg: data.error?.message || "Batch failed" } : item
+                        ));
+                        setStatusMessage(`Batch Job ${jobId} Failed`);
+                    }
+                } catch (e) {
+                    console.error("Polling error", e);
+                }
+            }
+        }, 10000); // Poll every 10s for batch
+
+        return () => clearInterval(pollInterval);
+    }, [queue]);
+    // const [isBatchProcessing, setIsBatchProcessing] = useState(false); // This was duplicated, removed
 
     const handleFileSelect = () => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'audio/*';
-        input.multiple = true; // Enable multiple
-        input.onchange = async (e) => {
-            const files = (e.target as HTMLInputElement).files;
-            if (!files || files.length === 0) return;
-
-            // Convert to array and limit to 10
-            const fileList = Array.from(files).slice(0, 10);
-
-            // Queue setup
-            const newQueue: QueueItem[] = fileList.map(f => ({
-                id: Math.random().toString(36).substr(2, 9),
-                file: f,
-                status: 'pending'
-            }));
-            setQueue(newQueue);
-
-            // Set first file as "selected" for preview
-            const firstFile = fileList[0];
-            setAudioUrl(URL.createObjectURL(firstFile));
-            setSelectedFile(firstFile);
-            setData([]);
-            setCurrentJobId(null);
-            setIsPlayerReady(false); // Reset player ready state
-            setStatusMessage(null); // Clear status to show Start button
-        };
-        input.click();
+        fileInputRef.current?.click();
     };
 
-    const handleTranscribe = async () => {
-        if (queue.length === 0) return;
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
+
+        const fileList = Array.from(files).slice(0, 10);
+
+        const newItems: QueueItem[] = fileList.map(f => ({
+            id: Math.random().toString(36).substr(2, 9),
+            file: f,
+            status: 'pending'
+        }));
+
+        setQueue(prev => [...prev, ...newItems]);
+
+        // Auto-select the first of the newly added files
+        const firstFile = fileList[0];
+        setAudioUrl(URL.createObjectURL(firstFile));
+        setSelectedFile(firstFile);
+        setData([]);
+        setCurrentJobId(null);
+        setIsPlayerReady(false);
+        setStatusMessage(null);
+        setSentimentResult(null);
+
+        // Reset input so same file can be picked again
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+
+        const files = e.dataTransfer.files;
+        if (!files || files.length === 0) return;
+
+        const fileList = Array.from(files).filter(f => f.type.startsWith('audio/')).slice(0, 10);
+        if (fileList.length === 0) return;
+
+        const newItems: QueueItem[] = fileList.map(f => ({
+            id: Math.random().toString(36).substr(2, 9),
+            file: f,
+            status: 'pending'
+        }));
+
+        setQueue(prev => [...prev, ...newItems]);
+
+        const firstFile = fileList[0];
+        setAudioUrl(URL.createObjectURL(firstFile));
+        setSelectedFile(firstFile);
+        setData([]);
+        setCurrentJobId(null);
+        setIsPlayerReady(false);
+        setSentimentResult(null);
+    };
+
+    const handleStartBatchProcess = async () => {
+        const pendingItems = queue.filter(item => item.status === 'pending');
+        if (pendingItems.length === 0) return;
+
         setIsBatchProcessing(true);
+        setStatusMessage("Initializing Batch Job (Saving 50% API Cost)...");
+
+        try {
+            const formData = new FormData();
+            pendingItems.forEach(item => {
+                formData.append('files', item.file);
+            });
+            formData.append('promptVersion', promptVersion);
+            formData.append('taskType', taskType);
+
+            const response = await fetch('/api/ai/audio/batch', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+            if (response.ok) {
+                // Update queue items to "processing"
+                setQueue(prev => prev.map(item =>
+                    pendingItems.find(p => p.id === item.id)
+                        ? { ...item, status: 'processing', batchJobId: result.batchJobId }
+                        : item
+                ));
+                setStatusMessage(`Batch Job Submitted: ${result.batchJobId}`);
+                // Refresh history or jobs list if needed
+            } else {
+                setStatusMessage(`Batch Submission Failed: ${result.error}`);
+            }
+        } catch (error) {
+            console.error("Batch error:", error);
+            setStatusMessage("Error submitting batch job");
+        } finally {
+            setIsBatchProcessing(false);
+        }
+    };
+
+    const handleStartProcess = async () => { // Renamed from handleTranscribe
+        if (queue.length === 0) return;
+        setIsProcessing(true); // Changed to isProcessing
 
         const currentQueue = [...queue];
 
@@ -194,7 +356,7 @@ export default function AudioStudio() {
                 const formData = new FormData();
                 formData.append("file", item.file);
                 formData.append("promptVersion", promptVersion);
-                formData.append("taskType", "word");
+                formData.append("taskType", taskType); // Changed to use taskType state
                 formData.append("duration", formattedDuration);
 
                 if (item.file.size > 5 * 1024 * 1024) {
@@ -259,10 +421,95 @@ export default function AudioStudio() {
             }
         }
 
-        setIsBatchProcessing(false);
+        setIsProcessing(false);
         setStatusMessage(null);
         fetchHistory();
     };
+
+    const handleSentimentAnalysis = async () => {
+        if (!selectedFile) {
+            alert("No audio file selected for analysis");
+            return;
+        }
+
+        setStatusMessage("Performing Multimodal Sentiment Analysis (Gemini 3 Flash)...");
+        try {
+            const formData = new FormData();
+            formData.append("file", selectedFile);
+            formData.append("prompt", "Perform a deep multi-segmented emotional audit. Break down the audio into meaningful segments and provide a creative transcription that captures tone and nuance.");
+
+            const response = await fetch('/api/ai/audio/sentiment', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+            if (response.ok) {
+                setSentimentResult(result);
+            } else {
+                alert(`Error: ${result.error}`);
+            }
+        } catch (e) {
+            alert("Sentiment analysis failed");
+        } finally {
+            setStatusMessage(null);
+        }
+    };
+
+    const handleGenerateTTS = async () => {
+        if (!ttsText) return;
+        setIsGeneratingTTS(true);
+        setStatusMessage("Generating Synthetic Voice (Gemini 2.5 Flash TTS)...");
+        setGeneratedTTS(null);
+
+        try {
+            const response = await fetch('/api/ai/audio/tts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: ttsText, voice: selectedVoice })
+            });
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                const res = await fetch(result.audioUrl);
+                const blob = await res.blob();
+                const file = new File([blob], result.filename, { type: result.mimeType || 'audio/wav' });
+
+                setGeneratedTTS({
+                    url: result.audioUrl,
+                    filename: result.filename,
+                    file: file
+                });
+
+                setStatusMessage("Audio Generated Successfully!");
+            } else {
+                alert(`TTS Failed: ${result.error}`);
+            }
+        } catch (e) {
+            alert("TTS Error");
+        } finally {
+            setIsGeneratingTTS(false);
+            setTimeout(() => setStatusMessage(null), 3000);
+        }
+    };
+
+    const handlePushToQueue = () => {
+        if (!generatedTTS) return;
+
+        const newItem: QueueItem = {
+            id: Math.random().toString(36).substr(2, 9),
+            file: generatedTTS.file,
+            status: 'pending'
+        };
+        setQueue(prev => [...prev, newItem]);
+
+        // Option to switch to it immediately
+        setAudioUrl(generatedTTS.url);
+        setSelectedFile(generatedTTS.file);
+
+        setShowTTS(false);
+        setGeneratedTTS(null);
+    };
+
 
     const handleDownloadZip = () => {
         if (!currentJobId) return;
@@ -321,9 +568,13 @@ export default function AudioStudio() {
             start, end,
             speaker: "Speaker 1",
             word: "",
-            type: "lexical"
+            type: "lexical",
+            tags: ""
         };
-        setData([...data, newSegment]);
+
+        // Add and sort by start time
+        const newData = [...data, newSegment].sort((a, b) => a.start - b.start);
+        setData(newData);
         setEditingId(newId);
         setEditFormData(newSegment);
 
@@ -344,7 +595,13 @@ export default function AudioStudio() {
 
     const handleSaveClick = () => {
         if (editingId === null) return;
-        setData(prev => prev.map(item => item.id === editingId ? (editFormData as AudioSegment) : item));
+        const updatedSegment = editFormData as AudioSegment;
+
+        // Update and Sort
+        const newData = data.map(item => item.id === editingId ? updatedSegment : item)
+            .sort((a, b) => a.start - b.start);
+
+        setData(newData);
         setEditingId(null);
 
         // Update region
@@ -352,6 +609,23 @@ export default function AudioStudio() {
             // Re-draw regions (simple way)
             // ideally update specific region
         }
+
+        // PERSISTENCE FIX: Update the queue item as well so tags are saved!
+        setQueue(prev => prev.map(item => {
+            if (item.file === selectedFile) {
+                // If the item has a 'result' object, update its data
+                if (item.result) {
+                    return {
+                        ...item,
+                        result: {
+                            ...item.result,
+                            data: newData
+                        }
+                    };
+                }
+            }
+            return item;
+        }));
     };
 
     const handleDeleteClick = (id: number) => {
@@ -366,7 +640,30 @@ export default function AudioStudio() {
     };
 
     return (
-        <div className="h-full flex flex-col gap-4">
+        <div
+            className={`h-full flex flex-col gap-4 relative ${isDragging ? 'bg-blue-50/50' : ''}`}
+            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={handleDrop}
+        >
+            {/* Hidden File Input */}
+            <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="audio/*"
+                multiple
+                className="hidden"
+            />
+
+            {/* Drag Overlay */}
+            {isDragging && (
+                <div className="absolute inset-0 z-[100] bg-blue-600/10 backdrop-blur-sm border-4 border-dashed border-blue-500 rounded-3xl flex flex-col items-center justify-center pointer-events-none">
+                    <UploadCloud size={64} className="text-blue-600 animate-bounce mb-4" />
+                    <h2 className="text-2xl font-black text-blue-700">Drop Audio to Process</h2>
+                    <p className="text-blue-500 font-medium">Capture intelligence from sound waves</p>
+                </div>
+            )}
 
             {/* Top Bar */}
             <div className="flex justify-between items-center">
@@ -419,9 +716,9 @@ export default function AudioStudio() {
                     </button>
 
                     {selectedFile && !statusMessage && (
-                        <button onClick={handleTranscribe}
+                        <button onClick={handleStartProcess}
                             className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm animate-pulse">
-                            <Mic size={16} /> {queue.length > 1 ? `Batch Process (${queue.length})` : "Start Agent"}
+                            <Mic size={16} /> {queue.length > 1 ? `Sequential Process (${queue.length})` : "Start Agent"}
                         </button>
                     )}
 
@@ -436,6 +733,276 @@ export default function AudioStudio() {
                             <Download size={16} /> Download ZIP
                         </button>
                     )}
+
+                    {/* New Feature Buttons */}
+                    <button onClick={() => setShowSentiment(true)}
+                        className="flex items-center gap-2 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white px-4 py-2 rounded-lg font-bold shadow-sm transition-colors text-sm">
+                        <Sparkles size={16} /> Sentiment
+                    </button>
+                    <button onClick={() => setShowTTS(true)}
+                        className="flex items-center gap-2 bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white px-4 py-2 rounded-lg font-bold shadow-sm transition-colors text-sm">
+                        <Zap size={16} /> TTS
+                    </button>
+                </div>
+            </div>
+
+            {/* Sliding Panels Overlay Container - "Canvas Feel" */}
+            {/* Sentiment Panel */}
+            <div className={`fixed inset-x-0 bottom-0 z-50 bg-white shadow-2xl rounded-t-3xl transition-transform duration-500 ease-in-out border-t border-slate-200 ${showSentiment ? 'translate-y-0' : 'translate-y-full'}`} style={{ height: '85vh' }}>
+                <div className="p-6 h-full flex flex-col">
+                    <div className="flex justify-between items-center mb-8">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-pink-100 rounded-2xl text-pink-600"><Sparkles size={24} /></div>
+                            <div>
+                                <h3 className="text-2xl font-bold text-slate-800">Transcript Sentiment Analysis</h3>
+                                <div className="flex items-center gap-2">
+                                    <p className="text-slate-500 text-sm italic">
+                                        {selectedFile ? `Active File: ${selectedFile.name}` : "Advanced Emotional Audit"}
+                                    </p>
+                                    {selectedFile && (
+                                        <button onClick={handleFileSelect} className="text-[10px] font-bold text-pink-500 hover:text-pink-600 uppercase tracking-widest border-b border-pink-500/30">Change</button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            {statusMessage && (
+                                <div className="px-4 py-1.5 bg-pink-50 border border-pink-100 rounded-full text-[10px] font-black text-pink-600 uppercase animate-pulse flex items-center gap-2">
+                                    <Clock size={12} /> {statusMessage}
+                                </div>
+                            )}
+                            <button onClick={() => setShowSentiment(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X size={24} /></button>
+                        </div>
+                    </div>
+
+                    <div className="flex-1 overflow-auto flex gap-6">
+                        {/* Overall Sentiment Insight */}
+                        <div className="w-80 space-y-4 shrink-0">
+                            <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 h-full flex flex-col justify-center items-center text-center shadow-inner">
+                                {sentimentResult ? (
+                                    <>
+                                        <div className="text-8xl mb-4 animate-in zoom-in drop-shadow-xl">{sentimentResult.overall?.emoji}</div>
+                                        <h4 className="text-3xl font-black text-slate-800 mb-1">{sentimentResult.overall?.sentiment}</h4>
+                                        <div className="text-[10px] font-black bg-white border border-slate-200 px-3 py-1 rounded-full uppercase tracking-tighter mb-6 text-slate-500 shadow-sm">Audit Score: {sentimentResult.overall?.score}%</div>
+
+                                        <div className="w-full space-y-2 text-left bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+                                            <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                                <span>Tone Archetype</span>
+                                                <span className="text-pink-600">{sentimentResult.overall?.tone}</span>
+                                            </div>
+                                            <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                                                <div className="h-full bg-pink-500 transition-all duration-1000" style={{ width: `${sentimentResult.overall?.score}%` }}></div>
+                                            </div>
+                                        </div>
+
+                                        <p className="mt-6 text-sm text-slate-600 leading-relaxed font-medium bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                                            <span className="text-pink-500 text-2xl font-serif mr-1">“</span>
+                                            {sentimentResult.overall?.summary}
+                                            <span className="text-pink-500 text-2xl font-serif ml-1">”</span>
+                                        </p>
+
+                                        <button
+                                            onClick={handleSentimentAnalysis}
+                                            disabled={!!statusMessage}
+                                            className="mt-6 text-[10px] font-black text-pink-600 hover:text-pink-700 uppercase tracking-widest flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+                                        >
+                                            <Sparkles size={12} /> {statusMessage ? "Analyzing..." : "Re-analyze Audio Context"}
+                                        </button>
+                                    </>
+                                ) : (
+                                    <div className="text-slate-400">
+                                        <div className="w-20 h-20 bg-pink-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                                            <Sparkles size={40} className="text-pink-400 opacity-50" />
+                                        </div>
+                                        <h4 className="text-lg font-bold text-slate-800 mb-2">Multimodal Audit</h4>
+                                        <p className="text-xs font-medium px-4 leading-relaxed">Gemini will analyze the actual audio waves to detect nuanced emotional shifts.</p>
+                                        <button
+                                            onClick={selectedFile ? handleSentimentAnalysis : handleFileSelect}
+                                            disabled={!!statusMessage}
+                                            className="mt-8 bg-slate-900 text-white px-10 py-3 rounded-xl font-bold shadow-xl hover:bg-slate-800 transition-all active:scale-95 flex items-center gap-2 mx-auto disabled:opacity-50"
+                                        >
+                                            {statusMessage ? (
+                                                <span className="animate-spin text-lg">⏳</span>
+                                            ) : selectedFile ? (
+                                                <Sparkles size={18} />
+                                            ) : (
+                                                <UploadCloud size={18} />
+                                            )}
+                                            {selectedFile ? "Analyze Audio Now" : "Select Audio to Analyze"}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Segmented Breakdown */}
+                        <div className="flex-1 space-y-4 overflow-y-auto pr-2 custom-scrollbar">
+                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest sticky top-0 bg-white py-2 z-10 flex justify-between items-center">
+                                <span>Segmented Intelligence</span>
+                                <span className="text-slate-300 font-mono">{sentimentResult?.segments?.length || 0} Emotional Anchors</span>
+                            </h4>
+                            {sentimentResult?.segments ? (
+                                <div className="space-y-3">
+                                    {sentimentResult.segments.map((seg: any, idx: number) => (
+                                        <div key={idx} className="bg-white border border-slate-100 p-4 rounded-2xl shadow-sm hover:border-pink-200 transition-colors group">
+                                            <div className="flex justify-between items-start mb-2">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-xs font-mono bg-slate-100 text-slate-500 px-2 py-0.5 rounded italic">
+                                                        {seg.start} - {seg.end}
+                                                    </span>
+                                                    <span className="text-xs font-bold text-pink-600 uppercase tracking-wider bg-pink-50 px-2 py-0.5 rounded flex items-center gap-1">
+                                                        <span>{seg.emoji}</span>
+                                                        <span>{seg.sentiment}</span>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <p className="text-sm text-slate-700 leading-relaxed italic">
+                                                {seg.transcript}
+                                            </p>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="h-64 border-2 border-dashed border-slate-100 rounded-3xl flex items-center justify-center text-slate-300 text-sm font-medium">
+                                    Awaiting segmented insights...
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Full Creative Transcript */}
+                        <div className="w-80 bg-slate-900 rounded-3xl p-6 text-white text-xs leading-relaxed overflow-auto relative shrink-0 shadow-2xl">
+                            <div className="flex items-center justify-between mb-4 pb-4 border-b border-white/10">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Creative Transcript</span>
+                                <div className="p-1.5 bg-white/10 rounded-lg text-white/40"><MessageSquare size={14} /></div>
+                            </div>
+                            <div className="font-mono text-slate-300 space-y-4 whitespace-pre-wrap leading-loose">
+                                {sentimentResult?.fullTranscript ? (
+                                    <div className="animate-in fade-in duration-1000 tracking-tight">
+                                        {sentimentResult.fullTranscript.split('\n').map((line: string, i: number) => {
+                                            const isSpeaker = line.includes(':') && line.split(':')[0].length < 20;
+                                            if (isSpeaker) {
+                                                const [name, ...content] = line.split(':');
+                                                return (
+                                                    <div key={i} className="mb-4">
+                                                        <span className="text-pink-500 font-black uppercase text-[10px] tracking-widest block mb-1 opacity-80">{name}</span>
+                                                        <span className="text-slate-100">{content.join(':')}</span>
+                                                    </div>
+                                                );
+                                            }
+                                            return <p key={i} className="mb-2">{line}</p>;
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div className="text-slate-600 italic">
+                                        No transcript data available. Run analysis to generate context.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* TTS Panel */}
+            <div className={`fixed inset-x-0 bottom-0 z-50 bg-white shadow-2xl rounded-t-3xl transition-transform duration-500 ease-in-out border-t border-slate-200 ${showTTS ? 'translate-y-0' : 'translate-y-full'}`} style={{ height: '85vh' }}>
+                <div className="p-6 h-full flex flex-col">
+                    <div className="flex justify-between items-center mb-8">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-violet-100 rounded-2xl text-violet-600"><Zap size={24} /></div>
+                            <div>
+                                <h3 className="text-2xl font-bold text-slate-800">Synthetic Voice Generation (TTS)</h3>
+                                <p className="text-slate-500 text-sm">Powered by Gemini 2.5 Flash Preview TTS</p>
+                            </div>
+                        </div>
+                        <button onClick={() => setShowTTS(false)} className="p-2 hover:bg-slate-100 rounded-full"><X size={24} /></button>
+                    </div>
+
+                    <div className="flex-1 flex gap-12 max-w-6xl mx-auto w-full">
+                        <div className="flex-1 space-y-6">
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-2">Text to Synthesize</label>
+                                <textarea
+                                    value={ttsText}
+                                    onChange={(e) => setTtsText(e.target.value)}
+                                    placeholder="Enter text to convert to speech..."
+                                    className="w-full h-64 bg-slate-50 border border-slate-200 rounded-xl p-4 focus:ring-2 focus:ring-violet-500 outline-none resize-none text-lg"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-2">Voice Model</label>
+                                <div className="grid grid-cols-4 gap-4">
+                                    {['Puck', 'Charon', 'Kore', 'Fenrir', 'Aoede'].map(v => (
+                                        <button
+                                            key={v}
+                                            onClick={() => setSelectedVoice(v)}
+                                            className={`p-3 rounded-lg border text-sm font-medium transition-all ${selectedVoice === v ? 'bg-violet-600 text-white border-violet-600 shadow-lg' : 'bg-white border-slate-200 hover:border-violet-300'}`}
+                                        >
+                                            {v}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="w-96 flex flex-col justify-center space-y-6">
+                            <div className="bg-slate-50 p-8 rounded-3xl border border-slate-100 text-center">
+                                <div className="w-24 h-24 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                                    <Mic size={40} className="text-violet-600" />
+                                </div>
+
+                                {generatedTTS ? (
+                                    <div className="space-y-4 animate-in zoom-in">
+                                        <h4 className="text-xl font-bold text-slate-800">Success!</h4>
+                                        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                                            <audio controls className="w-full h-10 mb-4" src={generatedTTS.url}>
+                                                Your browser does not support the audio element.
+                                            </audio>
+                                            <div className="flex gap-2">
+                                                <a
+                                                    href={generatedTTS.url}
+                                                    download={generatedTTS.filename}
+                                                    className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-colors"
+                                                >
+                                                    <Download size={14} /> Download
+                                                </a>
+                                                <button
+                                                    onClick={handlePushToQueue}
+                                                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-colors shadow-lg"
+                                                >
+                                                    <List size={14} /> Push to Queue
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => setGeneratedTTS(null)}
+                                            className="text-[10px] font-black text-slate-400 hover:text-slate-600 uppercase tracking-widest"
+                                        >
+                                            Generate Another
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <h4 className="text-xl font-bold text-slate-800 mb-2">Ready to Generate</h4>
+                                        <p className="text-slate-500 text-sm mb-8">This will synthesize high-quality speech. You can then preview, download, or manually add it to the transcription queue.</p>
+
+                                        <button
+                                            onClick={handleGenerateTTS}
+                                            disabled={!ttsText || isGeneratingTTS}
+                                            className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold shadow-xl hover:bg-slate-800 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                        >
+                                            {isGeneratingTTS ? <span className="animate-spin">⏳</span> : <Zap size={20} />}
+                                            {isGeneratingTTS ? "Synthesizing Core Audio..." : "Generate Audio"}
+                                        </button>
+                                        {!isGeneratingTTS && (
+                                            <button onClick={handleFileSelect} className="mt-4 text-[10px] font-black text-slate-400 hover:text-slate-600 uppercase tracking-widest flex items-center justify-center gap-2 mx-auto">
+                                                <UploadCloud size={12} /> Or Upload Sample for Reference
+                                            </button>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -638,9 +1205,10 @@ export default function AudioStudio() {
                     {/* Table Header */}
                     <div className="grid grid-cols-12 bg-slate-50 border-b border-slate-200 p-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                         <div className="col-span-1">ID</div>
-                        <div className="col-span-2">Time</div>
+                        <div className="col-span-3">Time Range (HH:MM:SS.mmm)</div>
                         <div className="col-span-2">Speaker</div>
-                        <div className="col-span-5">Content</div>
+                        <div className="col-span-3">Content</div>
+                        <div className="col-span-1">Tag</div>
                         <div className="col-span-1">Type</div>
                         <div className="col-span-1 text-right">Actions</div>
                     </div>
@@ -666,20 +1234,29 @@ export default function AudioStudio() {
                                         // Edit Mode
                                         <>
                                             <div className="col-span-1 text-slate-400 font-mono text-xs">#{row.id}</div>
-                                            <div className="col-span-2 flex gap-1">
-                                                <input type="number" className="w-16 text-xs p-1 border rounded"
-                                                    value={editFormData.start} onChange={e => handleFormChange('start', parseInt(e.target.value))} />
+                                            <div className="col-span-3 flex gap-1 items-center">
+                                                <input type="text" className="w-24 text-[10px] p-1 border rounded font-mono"
+                                                    value={formatMs(editFormData.start || 0)}
+                                                    onChange={e => handleFormChange('start', parseTimeToMs(e.target.value))} />
+                                                <span className="text-slate-400">-</span>
+                                                <input type="text" className="w-24 text-[10px] p-1 border rounded font-mono"
+                                                    value={formatMs(editFormData.end || 0)}
+                                                    onChange={e => handleFormChange('end', parseTimeToMs(e.target.value))} />
                                             </div>
                                             <div className="col-span-2">
                                                 <input type="text" className="w-full text-xs p-1 border rounded"
                                                     value={editFormData.speaker} onChange={e => handleFormChange('speaker', e.target.value)} />
                                             </div>
-                                            <div className="col-span-5">
+                                            <div className="col-span-3">
                                                 <input type="text" className="w-full text-xs p-1 border rounded font-medium"
                                                     value={editFormData.word} onChange={e => handleFormChange('word', e.target.value)} />
                                             </div>
                                             <div className="col-span-1">
-                                                <select className="w-full text-xs p-1 border rounded"
+                                                <input type="text" className="w-full text-[10px] p-1 border rounded" placeholder="Tag"
+                                                    value={editFormData.tags || ""} onChange={e => handleFormChange('tags', e.target.value)} />
+                                            </div>
+                                            <div className="col-span-1">
+                                                <select className="w-full text-[10px] p-1 border rounded"
                                                     value={editFormData.type} onChange={e => handleFormChange('type', e.target.value)}>
                                                     <option value="lexical">Lex</option>
                                                     <option value="filler">Fil</option>
@@ -695,14 +1272,19 @@ export default function AudioStudio() {
                                         // View Mode
                                         <>
                                             <div className="col-span-1 text-slate-400 font-mono text-xs">#{row.id}</div>
-                                            <div className="col-span-2 font-mono text-xs text-slate-500">
+                                            <div className="col-span-3 font-mono text-[10px] text-slate-500">
                                                 {formatMs(row.start)} - {formatMs(row.end)}
                                             </div>
                                             <div className="col-span-2 text-xs font-medium text-slate-700 truncate pr-2">
                                                 {row.speaker}
                                             </div>
-                                            <div className={`col-span-5 font-medium truncate pr-2 ${row.type === 'filler' ? 'text-amber-600 italic' : ''}`}>
+                                            <div className={`col-span-3 font-medium truncate pr-2 ${row.type === 'filler' ? 'text-amber-600 italic' : ''}`}>
                                                 {row.word}
+                                            </div>
+                                            <div className="col-span-1">
+                                                <span className="text-[10px] text-slate-400 bg-slate-50 px-1 rounded truncate block max-w-full" title={row.tags}>
+                                                    {row.tags || "—"}
+                                                </span>
                                             </div>
                                             <div className="col-span-1">
                                                 <Badge type={row.type} />
@@ -720,6 +1302,7 @@ export default function AudioStudio() {
                 </div>
 
             </div>
+
         </div>
     );
 }

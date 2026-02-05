@@ -9,6 +9,7 @@ if (!apiKey) {
 }
 
 const genAI = new GoogleGenerativeAI(apiKey || "");
+const fileManager = new GoogleAIFileManager(apiKey || "");
 
 
 // Vyonix Intelligence Engine - Proprietary Edition
@@ -29,6 +30,20 @@ const textModel = genAI.getGenerativeModel({
     timeout: 3600000 // 60 minutes
 });
 
-const fileManager = new GoogleAIFileManager(apiKey || "");
+const imageGenerationModel = genAI.getGenerativeModel({
+    model: "gemini-3-pro-image-preview",
+    generationConfig: {
+        // @ts-ignore
+        responseModalities: ["image"],
+        temperature: 0.9
+    }
+});
 
-export { model, textModel, genAI, fileManager };
+const ttsModel = genAI.getGenerativeModel({
+    model: "gemini-2.5-flash-preview-tts",
+});
+
+
+
+
+export { model, textModel, imageGenerationModel, ttsModel, genAI, fileManager };

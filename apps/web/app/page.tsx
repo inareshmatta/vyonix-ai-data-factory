@@ -68,7 +68,7 @@ export default function Dashboard() {
             </div>
             Performance Hub
           </h1>
-          <p className="text-slate-500 text-sm font-medium mt-2 max-w-md italic">Real-time metrics for Vyonix Studio AI Pipeline. Monitoring 3 enterprise-grade intelligence streams.</p>
+          <p className="text-slate-500 text-sm font-medium mt-2 max-w-md italic">Real-time metrics for Vyonix AI Data Factory Pipeline. Monitoring 3 enterprise-grade intelligence streams.</p>
         </div>
         <div className="flex gap-4">
           <div className="flex flex-col items-end px-6 border-r border-slate-200">

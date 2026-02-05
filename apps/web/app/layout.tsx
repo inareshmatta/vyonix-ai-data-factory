@@ -7,7 +7,7 @@ import { Search, Settings } from "lucide-react";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Vyonix Studio",
+  title: "Vyonix AI Data Factory",
   description: "Enterprise AI Data Annotation Platform",
 };
 

@@ -26,12 +26,14 @@ import {
     Layers,
     Type,
     Tag,
-    AlertTriangle
+    AlertTriangle,
+    Sparkles
 } from 'lucide-react';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { trackUsage } from '@/lib/usage';
 
 interface Entity {
+    mention?: string;
     start: number;
     end: number;
     label: string;
@@ -98,6 +100,11 @@ export default function NLPStudio() {
     // Sidebar Manual Select State
     const [selectedManualText, setSelectedManualText] = useState("");
 
+    // Synthetic Data State
+    const [showSynthetic, setShowSynthetic] = useState(false);
+    const [syntheticPrompt, setSyntheticPrompt] = useState("");
+    const [isGeneratingSynthetic, setIsGeneratingSynthetic] = useState(false);
+
     const commonTags = [
         "PERSON", "ORGANIZATION", "LOCATION", "DATE", "GPE", "MONEY", "EMAIL", "PHONE", "PRODUCT", "SSN"
     ];
@@ -112,9 +119,11 @@ export default function NLPStudio() {
         const list: { id: string, text: string, label: string, blockIdx: number, entityIdx: number }[] = [];
         data.forEach((block, bIdx) => {
             block.entities?.forEach((e, eIdx) => {
+                // If mention exists, use it as source of truth for text
+                const entityText = e.mention || block.text.slice(e.start, e.end);
                 list.push({
                     id: `entity-${bIdx}-${eIdx}`,
-                    text: block.text.slice(e.start, e.end),
+                    text: entityText,
                     label: e.label,
                     blockIdx: bIdx,
                     entityIdx: eIdx
@@ -148,7 +157,32 @@ export default function NLPStudio() {
             const result = await response.json();
 
             if (response.ok) {
-                const normalized = Array.isArray(result) ? result : (result.data || result.blocks || result.document || []);
+                let normalized = Array.isArray(result) ? result : (result.data || result.blocks || result.document || []);
+
+                // Self-Correction Logic: If indices are slightly drifted, find them in the text block
+                normalized = normalized.map((block: any) => ({
+                    ...block,
+                    entities: block.entities?.map((e: any) => {
+                        if (e.mention) {
+                            // Find the mention in the block text near the suggested start
+                            // LLMs often drift by +/- 5 chars
+                            const searchStart = Math.max(0, e.start - 20);
+                            const searchEnd = Math.min(block.text.length, e.end + 20);
+                            const segment = block.text.slice(searchStart, searchEnd);
+                            const localIdx = segment.indexOf(e.mention);
+
+                            if (localIdx !== -1) {
+                                return {
+                                    ...e,
+                                    start: searchStart + localIdx,
+                                    end: searchStart + localIdx + e.mention.length
+                                };
+                            }
+                        }
+                        return e;
+                    })
+                }));
+
                 setData(normalized);
                 setSelectedManualText("");
 
@@ -248,6 +282,38 @@ export default function NLPStudio() {
         document.body.removeChild(link);
     };
 
+    const handleGenerateSynthetic = async () => {
+        if (!syntheticPrompt) return;
+        setIsGeneratingSynthetic(true);
+        try {
+            const response = await fetch('/api/ai/text/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: syntheticPrompt, type: "Synthetic Data" })
+            });
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                // Auto-load the generated text as a new "file"
+                const blob = new Blob([result.text], { type: 'text/plain' });
+                const file = new File([blob], result.filename || "synthetic.txt", { type: "text/plain" });
+
+                // Trigger processFile
+                await processFile(file);
+
+                setShowSynthetic(false);
+                setSyntheticPrompt("");
+                alert(`Synthetic Data Generated & Loaded: ${result.filename}`);
+            } else {
+                alert(`Generation Failed: ${result.error}`);
+            }
+        } catch (e) {
+            alert("Generation Error");
+        } finally {
+            setIsGeneratingSynthetic(false);
+        }
+    };
+
     return (
         <div className="h-full flex flex-col bg-[#0f172a] text-slate-300 font-sans selection:bg-blue-500/30 selection:text-white overflow-hidden">
             {/* Header */}
@@ -270,6 +336,15 @@ export default function NLPStudio() {
                         className="group flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-xl text-sm font-black transition-all shadow-lg shadow-indigo-500/20 active:scale-95 disabled:opacity-50">
                         {isProcessing ? <span className="animate-spin text-sm">↻</span> : <UploadCloud size={16} className="group-hover:-translate-y-0.5 transition-transform" />}
                         {isProcessing ? 'Analyzing Pipeline...' : 'Upload Dataset'}
+                    </button>
+                    <button onClick={handleUpload} disabled={isProcessing}
+                        className="group flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-xl text-sm font-black transition-all shadow-lg shadow-indigo-500/20 active:scale-95 disabled:opacity-50">
+                        {isProcessing ? <span className="animate-spin text-sm">↻</span> : <UploadCloud size={16} className="group-hover:-translate-y-0.5 transition-transform" />}
+                        {isProcessing ? 'Analyzing Pipeline...' : 'Upload Dataset'}
+                    </button>
+                    <button onClick={() => setShowSynthetic(true)}
+                        className="flex items-center gap-2 bg-pink-600 hover:bg-pink-500 text-white px-4 py-2 rounded-xl text-sm font-black transition-all shadow-lg shadow-pink-500/20 active:scale-95">
+                        <Sparkles size={16} /> Generate Data
                     </button>
                     <button onClick={() => setShowJson(!showJson)} disabled={data.length === 0}
                         className="p-2.5 rounded-xl bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-400 hover:text-white transition-all transition-colors"><Code size={20} /></button>
@@ -498,6 +573,62 @@ export default function NLPStudio() {
                     </div>
                 </div>
             )}
+
+            {/* Synthetic Data Generation Panel */}
+            <div className={`fixed inset-0 z-50 bg-[#0f172a] transition-transform duration-500 ease-in-out ${showSynthetic ? 'translate-y-0' : 'translate-y-full'}`}>
+                <div className="h-full flex flex-col max-w-7xl mx-auto p-8 lg:p-12">
+                    <div className="flex justify-between items-center mb-12">
+                        <div className="flex items-center gap-4">
+                            <div className="p-4 bg-pink-500/10 rounded-2xl text-pink-500 border border-pink-500/20"><Sparkles size={32} /></div>
+                            <div>
+                                <h2 className="text-3xl font-black text-white tracking-tight">Synthetic Data Engine</h2>
+                                <p className="text-slate-500 text-sm font-bold uppercase tracking-widest mt-1">Powered by Gemini 3 Flash Preview</p>
+                            </div>
+                        </div>
+                        <button onClick={() => setShowSynthetic(false)} className="px-6 py-2 rounded-xl border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 font-bold transition-all">CLOSE ENGINE</button>
+                    </div>
+
+                    <div className="flex-1 grid grid-cols-12 gap-12 min-h-0">
+                        <div className="col-span-12 lg:col-span-7 flex flex-col gap-6">
+                            <div className="bg-[#1e293b] border border-slate-800 rounded-3xl p-8 flex-1 flex flex-col shadow-2xl">
+                                <label className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4">Prompt Engineering Context</label>
+                                <textarea
+                                    value={syntheticPrompt}
+                                    onChange={(e) => setSyntheticPrompt(e.target.value)}
+                                    placeholder="Describe the synthetic dataset you want to generate. Be specific about entities, structure, and domain (e.g. 'Generate a medical report for a patient with hypertension...')"
+                                    className="flex-1 bg-[#0f172a] border border-slate-700 rounded-2xl p-6 text-slate-200 focus:ring-2 focus:ring-pink-500/50 outline-none resize-none text-lg leading-relaxed placeholder:text-slate-600"
+                                />
+                                <div className="mt-6 flex justify-end">
+                                    <button
+                                        onClick={handleGenerateSynthetic}
+                                        disabled={!syntheticPrompt || isGeneratingSynthetic}
+                                        className="bg-pink-600 hover:bg-pink-500 text-white px-8 py-4 rounded-2xl font-black text-lg shadow-xl shadow-pink-600/20 transition-all active:scale-95 disabled:opacity-50 flex items-center gap-3"
+                                    >
+                                        {isGeneratingSynthetic ? <span className="animate-spin">⏳</span> : <Sparkles size={20} />}
+                                        INITIALIZE GENERATION
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="col-span-12 lg:col-span-5 flex flex-col justify-center">
+                            <div className="bg-gradient-to-br from-pink-500/10 to-indigo-500/10 border border-slate-800 rounded-3xl p-10 text-center relative overflow-hidden">
+                                <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
+                                <h3 className="text-2xl font-black text-white mb-4 relative z-10">Why Synthetic Data?</h3>
+                                <p className="text-slate-400 leading-relaxed mb-8 relative z-10">
+                                    Generate high-fidelity datasets for training and testing without compromising privacy.
+                                    Vyonix uses advanced LLMs to simulate realistic entities, structures, and edge cases.
+                                </p>
+                                <div className="flex flex-wrap gap-2 justify-center relative z-10">
+                                    {['GDPR Compliant', 'Infinite Scale', 'Edge Case Testing', 'Bias Mitigation'].map(tag => (
+                                        <span key={tag} className="px-3 py-1 bg-slate-900/50 border border-slate-700 rounded-lg text-[10px] font-bold text-slate-300 uppercase tracking-wider">{tag}</span>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <style jsx global>{`
                 .custom-scrollbar::-webkit-scrollbar {

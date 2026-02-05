@@ -5,6 +5,7 @@ export interface VyonixStats {
     audio_files: number;
     audio_seconds: number;
     images_processed: number;
+    images_generated: number;
     words_processed: number;
     tokens_input: number;
     tokens_output: number;
@@ -15,6 +16,7 @@ const DEFAULT_STATS: VyonixStats = {
     audio_files: 0,
     audio_seconds: 0,
     images_processed: 0,
+    images_generated: 0,
     words_processed: 0,
     tokens_input: 0,
     tokens_output: 0,
@@ -42,6 +44,7 @@ export const trackUsage = (delta: Partial<VyonixStats>) => {
         audio_files: current.audio_files + (delta.audio_files || 0),
         audio_seconds: current.audio_seconds + (delta.audio_seconds || 0),
         images_processed: current.images_processed + (delta.images_processed || 0),
+        images_generated: current.images_generated + (delta.images_generated || 0),
         words_processed: current.words_processed + (delta.words_processed || 0),
         tokens_input: current.tokens_input + (delta.tokens_input || 0),
         tokens_output: current.tokens_output + (delta.tokens_output || 0),

@@ -434,7 +434,8 @@ Provide output in this exact structure (do not change keys):
     {
       "start": "0:00:00.000000",
       "end": "0:00:00.500000",
-      "Transcription": ["Word_or_Tag"]
+      "Transcription": "Word_or_Content",
+      "tags": "Tag_Value"
     }
   ]
 }
@@ -556,9 +557,9 @@ Before finalizing, verify:
 
 
 export const generateASRPromptV4 = (
-    fileName: string,
-    totalDuration: string, // Format: "H:MM:SS.mmmmmm" e.g., "0:00:57.856000"
-    taskType: "word" | "paragraph" = "word"
+  fileName: string,
+  totalDuration: string, // Format: "H:MM:SS.mmmmmm" e.g., "0:00:57.856000"
+  taskType: "word" | "paragraph" = "word"
 ): string => `
 # Role
 You are a high-precision ASR Transcriptionist for Indian English student recordings.
@@ -1018,7 +1019,8 @@ You must provide your response in this EXACT structure:
     {
       "start": "0:00:00.000000",
       "end": "0:00:00.500000",
-      "Transcription": ["Word_or_Tag"]
+      "Transcription": ["Word_or_Content"],
+      "tags": ["Tag_Value_If_Any"]
     }
   ]
 }

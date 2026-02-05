@@ -34,30 +34,34 @@ export async function POST(req: NextRequest) {
         console.log(`[Text API] Upload complete. URI: ${uploadResult.file.uri}`);
 
         const prompt = `
-    Perform Named Entity Recognition (NER) and PII detection on the ENTIRE document provided.
-    It is CRITICAL that you do not truncate the response. Capture every paragraph and header.
+    Perform high-precision Named Entity Recognition (NER) and PII detection on the document provided.
     
-    Identify entities like PERSON, ORGANIZATION, DATE, LOCATION, GPE, MONEY, EMAIL, PHONE, PRODUCT, and SSN.
+    CRITICAL INSTRUCTIONS:
+    1. EXTREME PRECISION: Character indices ("start" and "end") must be EXACTLY correct relative to the "text" field you provide.
+    2. NO DETERMINERS: Do not include leading determiners like "the", "a", or "an" in the entity unless they are part of the proper name.
+    3. FULL TEXT: Capture every paragraph. The "text" field for each block must be the verbatim original text.
+    4. NO DRIFT: Ensure the text at Text[start:end] is the exact entity you detected.
+    
+    Identify: PERSON, ORGANIZATION, LOCATION, GPE, DATE, MONEY, EMAIL, PHONE, SSN, PRODUCT.
     
     Return the response ONLY in this JSON format:
     [
       {
-        "text": string (The original full paragraph or line of text),
+        "text": string (Full original paragraph),
         "type": "header" | "paragraph",
         "entities": [
           {
-            "start": number (start index in the 'text' string),
-            "end": number (end index in the 'text' string),
-            "label": string (e.g., "PERSON", "PHONE"),
-            "redaction": boolean (true if PII/Sensitive)
+            "mention": string (The exact text string detected),
+            "start": number (0-based start index),
+            "end": number (0-based end index),
+            "label": string (e.g., "PERSON"),
+            "redaction": boolean
           }
         ]
       }
     ]
     
-    Split the document into its original logical blocks (headers, paragraphs).
-    Ensure the "text" field contains the FULL original text of that block.
-    Do not wrap the JSON in markdown code blocks.
+    Do not wrap in markdown.
         `;
 
         const result = await model.generateContent([

@@ -43,7 +43,7 @@ export default function Sidebar() {
                 <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center text-lg mr-3 shadow-lg shadow-indigo-500/20">
                     🌌
                 </div>
-                <span className="font-bold text-lg tracking-tight text-slate-800">Vyonix <span className="text-blue-600">Studio</span></span>
+                <span className="font-bold text-lg tracking-tight text-slate-800">Vyonix AI <span className="text-blue-600">Data Factory</span></span>
             </div>
 
             <div className="flex-1 py-6 space-y-1 overflow-y-auto">
@@ -97,10 +97,10 @@ export default function Sidebar() {
 
             <div className="p-4 border-t border-slate-100 flex-shrink-0">
                 <div className="flex items-center space-x-3 p-2 rounded-lg bg-slate-50 border border-slate-100">
-                    <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 font-bold text-xs">AI</div>
+                    <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 font-bold text-xs">NM</div>
                     <div>
-                        <p className="text-xs font-medium text-slate-700">Admin User</p>
-                        <p className="text-[10px] text-slate-400">Vertex AI Admin</p>
+                        <p className="text-xs font-medium text-slate-700">Naresh Matta</p>
+                        <p className="text-[10px] text-slate-400">ADF - AI Data Factory</p>
                     </div>
                 </div>
             </div>
