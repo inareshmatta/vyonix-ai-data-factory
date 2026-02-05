@@ -1,13 +1,13 @@
 # 💎 The Gemini Power: Vyonix Studio & The Future of Multimodal Intelligence
 
-Vyonix Studio is the ultimate **Technical Showcase** for the **Google Gemini 3** ecosystem. It is a proprietary industrial interface that unlocks the latent power of multimodal transformers, turning them into a globally competitive **AI Data Factory**.
+Vyonix AI Data Factory is the ultimate **Technical Showcase** for the **Google Gemini 3** ecosystem. It is a proprietary industrial interface that unlocks the latent power of multimodal transformers, turning them into a globally competitive **AI Data Factory**.
 
 ---
 
 ## ⚡ Showcasing Gemini 3's Core Pillars
 
 ### 👁️ Spatial Intelligence (Vision)
-Vyonix Studio exposes the "Eyes" of **Gemini 3 Flash**. 
+Vyonix AI Data Factory exposes the "Eyes" of **Gemini 3 Flash**. 
 *   **Normalized 0-1000 Coordinates**: Unlike generic analysis, Vyonix forces Gemini into a strict spatial-token mode, extracting surgical bounding boxes.
 *   **Multimodal Scene Generation**: Using **Gemini 3 Pro**, we synthesize high-fidelity visual data that serves as the "Ground Truth" for rare edge cases.
 
@@ -25,7 +25,7 @@ Vyonix leverages Gemini's native audio processing (direct waveform analysis) to 
 
 ## 🏗️ Building Data Services with Gemini
 
-Vyonix Studio is the "Refinery" for the modern Data Service economy. 
+Vyonix AI Data Factory is the "Refinery" for the modern Data Service economy. 
 *   **For Custom Model Training**: Developers use Vyonix to clean, label, and export datasets specifically for fine-tuning in **Vertex AI**.
 *   **For Data Augmentation**: When real-world data is biased or incomplete, the **Gemini 3 Pro** engine within Vyonix synthesises diverse variations to ensure model fairness.
 *   **Financial Observability**: Every token interaction is monitored, showcasing how Gemini’s **Batch API** architecture can drive down costs by up to 50% for high-volume enterprises.

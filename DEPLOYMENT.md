@@ -1,6 +1,6 @@
 # 🚀 Deploying Vyonix Studio to Google Cloud Run
 
-To participate in the **Gemini API Developer Competition** (Hackathon) or deploy Vyonix Studio for demo purposes, follow this guide.
+To participate in the **Gemini API Developer Competition** (Hackathon) or deploy Vyonix AI Data Factory for demo purposes, follow this guide.
 
 ## 🔑 The "API Key" Question
 **"Will this take my API Key?"**

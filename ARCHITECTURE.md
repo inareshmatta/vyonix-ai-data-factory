@@ -1,7 +1,7 @@
 # 🏗️ Vyonix Studio: End-to-End Architectural Blueprint
 ### The Industrial Ecosystem of the Multimodal AI Data Factory
 
-Vyonix Studio is architected as an industrial-grade **Multimodal Refinery**. It utilizes a decoupled, service-oriented architecture designed to handle massive AI data throughput while maintaining a premium, high-speed user experience.
+Vyonix AI Data Factory is architected as an industrial-grade **Multimodal Refinery**. It utilizes a decoupled, service-oriented architecture designed to handle massive AI data throughput while maintaining a premium, high-speed user experience.
 
 ---
 
@@ -74,7 +74,7 @@ graph TD
 ## 🛠️ Proprietary Engineering Triumphs
 
 ### 🎥 1. The Audio Reconstruction Engine
-Traditional APIs often return raw, container-less sound waves. Vyonix Studio features a native **Audio Header Injector**:
+Traditional APIs often return raw, container-less sound waves. Vyonix AI Data Factory features a native **Audio Header Injector**:
 - **PCM Capture**: Intercepts direct L16 PCM data from the `gemini-2.5-flash-preview-tts` model.
 - **RIFF/WAV Reconstruction**: Manually calculates byte-rate and block-alignment to inject a valid **44-byte WAV header**.
 - **Fidelity**: Locked at **24,000Hz (Mono, 16-bit)** for standard browser and OS player compatibility.
@@ -95,7 +95,7 @@ We solved "coordinate drift" in text indexing with **Precision Snapping**:
 ---
 
 ## 🔒 Enterprise Security: Model Scrubbing
-Vyonix Studio is built for professional service providers. An **Interceptor Layer** in our API routes scrubs all references to underlying models. Output is re-branded as **"Vyonix-Intelligence-Proprietary"**, ensuring a fully white-labeled enterprise profile.
+Vyonix AI Data Factory is built for professional service providers. An **Interceptor Layer** in our API routes scrubs all references to underlying models. Output is re-branded as **"Vyonix-Intelligence-Proprietary"**, ensuring a fully white-labeled enterprise profile.
 
 ---
 

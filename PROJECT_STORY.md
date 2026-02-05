@@ -11,7 +11,7 @@ This project proves that in 2026, the primary programming language is **English*
 ---
 
 ## 🚀 The Mission: Ending the "Century of Manual Labeling"
-AI is meant to solve problems, yet we spend years of manual human labor teaching it how to do so. This is the **Data Paradox**. Vyonix Studio is a **High-Velocity Refinery** designed to collapse the Data Life Cycle.
+AI is meant to solve problems, yet we spend years of manual human labor teaching it how to do so. This is the **Data Paradox**. Vyonix AI Data Factory is a **High-Velocity Refinery** designed to collapse the Data Life Cycle.
 
 We address the **Localization Barrier** (Indian accents/Hinglish) and **Human Fatigue** by letting Gemini 3 take the "entire load."
 

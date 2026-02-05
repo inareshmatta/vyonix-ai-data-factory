@@ -12,7 +12,7 @@
 ---
 
 ## 🏗️ The Unified Multimodal Ecosystem
-Vyonix Studio is a complete **AI Data Refinery**. It leverages the full-spectrum power of the Gemini Ecosystem to transform raw, chaotic data into high-fidelity "Ground Truth" assets for industrial AI applications.
+Vyonix AI Data Factory is a complete **Multimodal Refinery**. It leverages the full-spectrum power of the Gemini Ecosystem to transform raw, chaotic data into high-fidelity "Ground Truth" assets for industrial AI applications.
 
 ```mermaid
 graph TD
