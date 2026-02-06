@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Project folder for synthetic data
-        const publicDir = path.join(process.cwd(), "public", "synthetic-data-images");
+        const publicDir = path.join(process.cwd(), "public", "synthetic data - images");
 
         try {
             await fs.access(publicDir);
@@ -66,21 +66,9 @@ export async function POST(req: NextRequest) {
                 }
 
                 if (imageBase64) {
-                    // Cloud Run is ephemeral, so saving files to 'public' usually doesn't work as expected 
-                    // (they don't persist and aren't served correctly if not present at build time).
-                    // We will return the image directly as a Base64 Data URI.
-                    const mimeType = "image/png"; // Gemini usually returns PNG data
-                    const dataUri = `data:${mimeType};base64,${imageBase64}`;
-                    images.push(dataUri);
-
-                    // Optional: Try to save locally just for debugging if running locally, avoids crash on cloud if fail
-                    try {
-                        // Only try to write if we are local (we can't easily detect, but we can catch the error)
-                        // Actually, for Cloud Run production stability, let's skip File IO entirely.
-                    } catch (e) {
-                        // ignore
-                    }
-
+                    const buffer = Buffer.from(imageBase64, 'base64');
+                    await fs.writeFile(filePath, buffer);
+                    images.push(`/synthetic data - images/${filename}`);
                 } else {
                     // If SDK fails to parse standard structure, try checking text for "I cannot generate images" error
                     const text = response.text ? response.text() : "No text response";
