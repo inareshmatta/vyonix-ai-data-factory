@@ -469,18 +469,35 @@ export default function AudioStudio() {
             });
             const result = await response.json();
 
-            if (response.ok && result.success) {
-                const res = await fetch(result.audioUrl);
-                const blob = await res.blob();
-                const file = new File([blob], result.filename, { type: result.mimeType || 'audio/wav' });
+            if (response.ok && (result.success || result.audioBase64)) {
+                let blob;
+                if (result.audioBase64) {
+                    // Convert Base64 to Blob
+                    const byteCharacters = atob(result.audioBase64);
+                    const byteNumbers = new Array(byteCharacters.length);
+                    for (let i = 0; i < byteCharacters.length; i++) {
+                        byteNumbers[i] = byteCharacters.charCodeAt(i);
+                    }
+                    const byteArray = new Uint8Array(byteNumbers);
+                    blob = new Blob([byteArray], { type: result.mimeType || 'audio/wav' });
+                } else if (result.audioUrl) {
+                    // Fallback for legacy file URL (dev mode)
+                    const res = await fetch(result.audioUrl);
+                    blob = await res.blob();
+                }
 
-                setGeneratedTTS({
-                    url: result.audioUrl,
-                    filename: result.filename,
-                    file: file
-                });
+                if (blob) {
+                    const blobUrl = URL.createObjectURL(blob);
+                    const file = new File([blob], result.filename, { type: result.mimeType || 'audio/wav' });
 
-                setStatusMessage("Audio Generated Successfully!");
+                    setGeneratedTTS({
+                        url: blobUrl,
+                        filename: result.filename,
+                        file: file
+                    });
+
+                    setStatusMessage("Audio Generated Successfully!");
+                }
             } else {
                 alert(`TTS Failed: ${result.error}`);
             }

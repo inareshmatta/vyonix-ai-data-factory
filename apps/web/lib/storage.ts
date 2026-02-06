@@ -3,7 +3,9 @@ import path from 'path';
 import archiver from 'archiver';
 import { v4 as uuidv4 } from 'uuid';
 
-const STORAGE_ROOT = path.join(process.cwd(), '..', '..', 'data', 'jobs');
+const STORAGE_ROOT = process.env.NODE_ENV === 'production'
+    ? path.join('/tmp', 'jobs')
+    : path.join(process.cwd(), '..', '..', 'data', 'jobs');
 
 // Ensure storage root exists
 if (!fs.existsSync(STORAGE_ROOT)) {

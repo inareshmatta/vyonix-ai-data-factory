@@ -109,17 +109,17 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        const extension = finalMimeType.includes("mp3") ? "mp3" : "wav";
-        const filename = `synthetic_audio_${uuidv4()}.${extension}`;
-        const filePath = path.join(publicDir, filename);
+        // DIRECT RETURN (Serverless-friendly)
+        // Instead of saving to a potentially read-only filesystem, we return the base64 data directly.
+        // The frontend will convert this to a Blob for playback and download.
 
-        await fs.writeFile(filePath, audioBuffer);
+        const base64Audio = audioBuffer.toString('base64');
 
         return NextResponse.json({
             success: true,
-            audioUrl: `/synthetic-audio/${filename}`,
-            filename: filename,
-            mimeType: finalMimeType
+            audioBase64: base64Audio,
+            mimeType: finalMimeType,
+            filename: `synthetic_${voice || 'voice'}_${Date.now()}.${finalMimeType.includes('mp3') ? 'mp3' : 'wav'}`
         });
 
     } catch (error: any) {
