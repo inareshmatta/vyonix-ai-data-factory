@@ -1,0 +1,12 @@
+{
+  "name": "budget-enforcer",
+  "version": "1.0.0",
+  "description": "Automatically stops Cloud Run service when budget is exceeded",
+  "main": "index.js",
+  "dependencies": {
+    "@google-cloud/run": "^1.3.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

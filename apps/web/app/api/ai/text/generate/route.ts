@@ -1,8 +1,6 @@
 
 import { NextRequest, NextResponse } from "next/server";
-import { model } from "@/lib/gemini";
-import fs from "fs/promises";
-import path from "path";
+import { textModel } from "@/lib/gemini";
 import { v4 as uuidv4 } from "uuid";
 
 export async function POST(req: NextRequest) {
@@ -12,14 +10,6 @@ export async function POST(req: NextRequest) {
 
         if (!prompt) {
             return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
-        }
-
-        // Project folder for synthetic text
-        const publicDir = path.join(process.cwd(), "public", "synthetic data - text");
-        try {
-            await fs.access(publicDir);
-        } catch {
-            await fs.mkdir(publicDir, { recursive: true });
         }
 
         // Construct System Prompt for Gemini 3 Flash
@@ -37,20 +27,17 @@ export async function POST(req: NextRequest) {
             Do not include markdown code blocks unless requested.
         `;
 
-        const result = await model.generateContent(systemPrompt);
+        const result = await textModel.generateContent(systemPrompt);
         const response = await result.response;
         const generatedText = response.text();
 
-        // Save to file
-        const filename = `synthetic_text_${uuidv4()}.txt`; // or .md / .json based on content
-        const filePath = path.join(publicDir, filename);
+        // Generate filename for client-side use
+        const filename = `synthetic_text_${uuidv4()}.txt`;
 
-        await fs.writeFile(filePath, generatedText);
-
+        // Return text directly - no file save needed for Cloud Run
         return NextResponse.json({
             success: true,
             text: generatedText,
-            url: `/synthetic data - text/${filename}`,
             filename: filename
         });
 

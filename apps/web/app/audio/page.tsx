@@ -529,8 +529,36 @@ export default function AudioStudio() {
 
 
     const handleDownloadZip = () => {
-        if (!currentJobId) return;
-        window.open(`/api/history/${currentJobId}/download`, '_blank');
+        // Find the current file's result in the queue
+        const queueItem = queue.find(q => q.file === selectedFile);
+
+        if (queueItem?.result?.zipBase64 && queueItem?.result?.zipFileName) {
+            // Cloud Run compatible: Use the ZIP data returned directly from API
+            try {
+                const binaryString = atob(queueItem.result.zipBase64);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                const blob = new Blob([bytes], { type: 'application/zip' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = queueItem.result.zipFileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                console.error("Download error:", e);
+                alert("Download failed. Please try processing the file again.");
+            }
+        } else if (currentJobId) {
+            // Fallback to old method (works locally)
+            window.open(`/api/history/${currentJobId}/download`, '_blank');
+        } else {
+            alert("No data available to download. Please process an audio file first.");
+        }
     };
 
     // --- Wavesurfer Handlers ---
@@ -744,7 +772,7 @@ export default function AudioStudio() {
                             <Clock size={14} /> {statusMessage}
                         </span>
                     )}
-                    {currentJobId && (
+                    {(currentJobId || queue.some(q => q.file === selectedFile && q.result?.zipBase64)) && (
                         <button onClick={handleDownloadZip}
                             className="flex items-center gap-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm">
                             <Download size={16} /> Download ZIP

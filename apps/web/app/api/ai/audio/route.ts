@@ -180,25 +180,67 @@ export async function POST(req: NextRequest) {
 
             // Save Job Artifacts Locally
             console.log("[Audio API] Saving job artifacts...");
-            const jobInfo = await JobStorage.saveJob(
-                buffer,
-                file.name,
-                formattedData, // Save the version with string timestamps
-                {
-                    status: 'completed',
-                    durationMs: Date.now() - startTime,
-                    tokenUsage: {
-                        input: usage?.promptTokenCount || 0,
-                        output: usage?.candidatesTokenCount || 0,
-                        total: usage?.totalTokenCount || 0
+            let jobInfo = { jobId: "ephemeral_" + Date.now(), zipPath: "" };
+
+            try {
+                const info = await JobStorage.saveJob(
+                    buffer,
+                    file.name,
+                    formattedData, // Save the version with string timestamps
+                    {
+                        status: 'completed',
+                        durationMs: Date.now() - startTime,
+                        tokenUsage: {
+                            input: usage?.promptTokenCount || 0,
+                            output: usage?.candidatesTokenCount || 0,
+                            total: usage?.totalTokenCount || 0
+                        }
                     }
-                }
-            );
+                );
+                jobInfo = info;
+            } catch (storageErr) {
+                console.warn("[Audio API] Note: Failed to save persistent history (this is expected on Cloud Run if volumes aren't mounted).", storageErr);
+            }
+
+            // Generate downloadable ZIP as Base64 for Cloud Run compatibility
+            // (Cloud Run filesystem is ephemeral, so we return data directly)
+            const downloadJsonString = JSON.stringify(formattedData, null, 2);
+            const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_').replace(/\.[^/.]+$/, "");
+
+            // Create ZIP in memory
+            const archiver = require('archiver');
+            const { PassThrough } = require('stream');
+
+            const zipBase64 = await new Promise<string>((resolve, reject) => {
+                const chunks: Buffer[] = [];
+                const passThrough = new PassThrough();
+
+                passThrough.on('data', (chunk: Buffer) => chunks.push(chunk));
+                passThrough.on('end', () => {
+                    const zipBuffer = Buffer.concat(chunks);
+                    resolve(zipBuffer.toString('base64'));
+                });
+                passThrough.on('error', reject);
+
+                const archive = archiver('zip', { zlib: { level: 9 } });
+                archive.on('error', reject);
+                archive.pipe(passThrough);
+
+                // Add audio file
+                archive.append(buffer, { name: file.name });
+                // Add JSON annotations
+                archive.append(downloadJsonString, { name: `${safeName}.json` });
+
+                archive.finalize();
+            });
 
             return NextResponse.json({
                 data: sanitizedData,
                 jobId: jobInfo.jobId,
-                zipPath: jobInfo.zipPath
+                zipPath: jobInfo.zipPath,
+                // For Cloud Run: return ZIP directly so frontend can download without second request
+                zipBase64: zipBase64,
+                zipFileName: `${safeName}_vyonix.zip`
             });
 
         } catch (e) {
