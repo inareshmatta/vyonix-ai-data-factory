@@ -68,14 +68,8 @@ export default function Sidebar() {
                 <SidebarItem
                     icon={ImageIcon}
                     label="Vision Studio"
-                    href="/image"
-                    active={pathname === '/image'}
-                />
-                <SidebarItem
-                    icon={Video}
-                    label="Video Studio"
-                    href="/video"
-                    active={pathname === '/video'}
+                    href="/vision"
+                    active={pathname === '/vision' || pathname === '/image' || pathname === '/video'}
                 />
                 <SidebarItem
                     icon={FileText}

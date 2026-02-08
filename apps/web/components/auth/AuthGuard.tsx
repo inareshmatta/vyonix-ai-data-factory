@@ -15,6 +15,12 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         const checkAuth = () => {
+            // Bypass AuthGuard for the landing page path itself to prevent loops
+            if (pathname.includes('/landing-page/')) {
+                setAuthorized(true);
+                return;
+            }
+
             const session = localStorage.getItem('vyonix_session');
             const authTime = localStorage.getItem('vyonix_auth_time');
 
@@ -24,7 +30,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
             if (!session || !HASHES.includes(session) || isExpired) {
                 localStorage.removeItem('vyonix_session');
                 localStorage.removeItem('vyonix_auth_time');
-                // Use a proper landing page URL or just redirect back
+                // Redirect to the static landing page
                 window.location.href = '/landing-page/modern-landing.html';
                 return;
             }
