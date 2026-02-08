@@ -935,9 +935,8 @@
                 localStorage.setItem('vyonix_auth_time', Date.now());
 
                 document.body.style.transition = 'opacity 1s, filter 1s';
-                document.body.style.opacity = '0';
                 document.body.style.filter = 'blur(20px)';
-                setTimeout(() => window.location.href = 'http://localhost:3000', 1000);
+                setTimeout(() => window.location.href = '/', 1000);
             } else {
                 showError("Invalid Product Key. Access Denied.");
                 verifyBtn.disabled = false;
