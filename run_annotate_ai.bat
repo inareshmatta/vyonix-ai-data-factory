@@ -12,7 +12,7 @@ call npm install
 
 echo [2/3] Launching Browser...
 timeout /t 3 /nobreak >nul
-start http://localhost:3000/audio
+start "" "d:\Anodatasense\landing-page\modern-landing.html"
 
 echo [3/3] Starting Development Server...
 echo The app will be available at http://localhost:3000/audio

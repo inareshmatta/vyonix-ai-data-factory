@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 import {
     Mic,
     Image as ImageIcon,
+    Video,
     FileText,
     LayoutDashboard,
     Layers,
@@ -69,6 +70,12 @@ export default function Sidebar() {
                     label="Vision Studio"
                     href="/image"
                     active={pathname === '/image'}
+                />
+                <SidebarItem
+                    icon={Video}
+                    label="Video Studio"
+                    href="/video"
+                    active={pathname === '/video'}
                 />
                 <SidebarItem
                     icon={FileText}
