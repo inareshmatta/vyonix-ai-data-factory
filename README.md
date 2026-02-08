@@ -68,9 +68,9 @@ graph TD
     end
 
     subgraph "Google Cloud (Antigravity)"
-        GeminiFlash[⚡ Gemini 3 Flash\n(Transcription, Object Detection, NER)]
-        GeminiPro[🧠 Gemini 3 Pro\n(Reasoning, Image Gen)]
-        GeminiTTS[🗣️ Gemini 2.5 TTS\n(Speech Synthesis)]
+        GeminiFlash["⚡ Gemini 3 Flash\n(Transcription, Object Detection, NER)"]
+        GeminiPro["🧠 Gemini 3 Pro\n(Reasoning, Image Gen)"]
+        GeminiTTS["🗣️ Gemini 2.5 TTS\n(Speech Synthesis)"]
     end
 
     Audio --> API_AI
