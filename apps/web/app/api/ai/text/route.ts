@@ -34,32 +34,44 @@ export async function POST(req: NextRequest) {
         console.log(`[Text API] Upload complete. URI: ${uploadResult.file.uri}`);
 
         const prompt = `
-    Perform high-precision Named Entity Recognition (NER) and PII detection on the document provided.
+    Perform high-precision Named Entity Recognition (NER), PII detection, and Semantic Analysis on the document provided.
     
     CRITICAL INSTRUCTIONS:
     1. EXTREME PRECISION: Character indices ("start" and "end") must be EXACTLY correct relative to the "text" field you provide.
-    2. NO DETERMINERS: Do not include leading determiners like "the", "a", or "an" in the entity unless they are part of the proper name.
-    3. FULL TEXT: Capture every paragraph. The "text" field for each block must be the verbatim original text.
-    4. NO DRIFT: Ensure the text at Text[start:end] is the exact entity you detected.
+    2. FULL TEXT: Capture every paragraph. The "text" field for each block must be the verbatim original text.
+    3. SENTIMENT & SUMMARY: Analyze the overall document sentiment and provide a concise summary.
+    4. RELATIONS: Identify key relationships between entities (e.g., "Steve Jobs" -> "FOUNDED" -> "Apple").
     
     Identify: PERSON, ORGANIZATION, LOCATION, GPE, DATE, MONEY, EMAIL, PHONE, SSN, PRODUCT.
     
     Return the response ONLY in this JSON format:
-    [
-      {
-        "text": string (Full original paragraph),
-        "type": "header" | "paragraph",
-        "entities": [
-          {
-            "mention": string (The exact text string detected),
-            "start": number (0-based start index),
-            "end": number (0-based end index),
-            "label": string (e.g., "PERSON"),
-            "redaction": boolean
-          }
-        ]
-      }
-    ]
+    {
+      "summary": string (3-5 sentence summary of the document),
+      "sentiment": "POSITIVE" | "NEUTRAL" | "NEGATIVE",
+      "topics": string[] (Array of top 5-7 key topics/themes),
+      "relations": [
+        {
+          "source": string (Entity 1 text),
+          "target": string (Entity 2 text),
+          "relation": string (Relationship type, e.g. "WORKS_FOR", "LOCATED_IN")
+        }
+      ],
+      "blocks": [
+        {
+          "text": string (Full original paragraph),
+          "type": "header" | "paragraph",
+          "entities": [
+            {
+              "mention": string (The exact text string detected),
+              "start": number (0-based start index),
+              "end": number (0-based end index),
+              "label": string (e.g., "PERSON"),
+              "redaction": boolean
+            }
+          ]
+        }
+      ]
+    }
     
     Do not wrap in markdown.
         `;
@@ -83,11 +95,11 @@ export async function POST(req: NextRequest) {
         // Robust JSON extraction
         let jsonString = text.replace(/```json/g, "").replace(/```/g, "").trim();
 
-        // Find array bounds if extra text exists
-        const firstBracket = jsonString.indexOf('[');
-        const lastBracket = jsonString.lastIndexOf(']');
-        if (firstBracket !== -1 && lastBracket !== -1) {
-            jsonString = jsonString.substring(firstBracket, lastBracket + 1);
+        // Find object bounds
+        const firstBrace = jsonString.indexOf('{');
+        const lastBrace = jsonString.lastIndexOf('}');
+        if (firstBrace !== -1 && lastBrace !== -1) {
+            jsonString = jsonString.substring(firstBrace, lastBrace + 1);
         }
 
         try {

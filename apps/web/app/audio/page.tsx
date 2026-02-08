@@ -120,7 +120,7 @@ export default function AudioStudio() {
     const [batchJobs, setBatchJobs] = useState<any[]>([]); // Track batch jobs from API
     const [currentJobId, setCurrentJobId] = useState<string | null>(null);
 
-    const [promptVersion, setPromptVersion] = useState<'v1' | 'v2' | 'v3' | 'v4'>('v1');
+    const [promptVersion, setPromptVersion] = useState<'v1' | 'v2' | 'v3' | 'v4'>('v4');
     const [taskType, setTaskType] = useState<'word' | 'sentence'>('word'); // Added taskType state
 
 
@@ -528,12 +528,67 @@ export default function AudioStudio() {
     };
 
 
-    const handleDownloadZip = () => {
-        // Find the current file's result in the queue
+    const handleDownloadZip = async () => {
+        // PRIORITY: Generate fresh ZIP if we have data and file (includes manual edits)
+        if (selectedFile && data.length > 0) {
+            try {
+                setStatusMessage("Packaging current state...");
+
+                const exportData = {
+                    metadata: {
+                        filename: selectedFile.name,
+                        timestamp: new Date().toISOString(),
+                        duration: audioDuration,
+                        source: "Vyonix Audio Studio"
+                    },
+                    segments: data.map(item => ({
+                        ...item,
+                        start: formatMs(item.start),
+                        end: formatMs(item.end)
+                    }))
+                };
+
+                const formData = new FormData();
+                formData.append("file", selectedFile);
+                formData.append("json", JSON.stringify(exportData, null, 2));
+                const safeName = selectedFile.name.replace(/\.[^/.]+$/, "");
+                formData.append("jsonName", `${safeName}.json`);
+
+                const response = await fetch('/api/utils/zip', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.zipBase64) {
+                    const binaryString = atob(result.zipBase64);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+                    const blob = new Blob([bytes], { type: 'application/zip' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = result.filename || `${safeName}_updated.zip`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    setStatusMessage(null);
+                    return;
+                }
+            } catch (e) {
+                console.error("Fresh ZIP generation failed", e);
+                setStatusMessage("Error packaging ZIP");
+            }
+        }
+
+        // FALLBACK: Use pre-generated ZIP from queue (stale data)
         const queueItem = queue.find(q => q.file === selectedFile);
 
         if (queueItem?.result?.zipBase64 && queueItem?.result?.zipFileName) {
-            // Cloud Run compatible: Use the ZIP data returned directly from API
             try {
                 const binaryString = atob(queueItem.result.zipBase64);
                 const bytes = new Uint8Array(binaryString.length);
@@ -554,10 +609,10 @@ export default function AudioStudio() {
                 alert("Download failed. Please try processing the file again.");
             }
         } else if (currentJobId) {
-            // Fallback to old method (works locally)
+            // Fallback to old method (history API)
             window.open(`/api/history/${currentJobId}/download`, '_blank');
         } else {
-            alert("No data available to download. Please process an audio file first.");
+            alert("No data available to download.");
         }
     };
 
@@ -684,6 +739,8 @@ export default function AudioStudio() {
         }
     };
 
+
+
     return (
         <div
             className={`h-full flex flex-col gap-4 relative ${isDragging ? 'bg-blue-50/50' : ''}`}
@@ -727,32 +784,11 @@ export default function AudioStudio() {
                 </div>
 
                 <div className="flex gap-4 items-center">
-                    {/* Prompt Selector */}
-                    <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
-                        <button
-                            onClick={() => setPromptVersion('v1')}
-                            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${promptVersion === 'v1' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                        >
-                            V1 Agent
-                        </button>
-                        <button
-                            onClick={() => setPromptVersion('v2')}
-                            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${promptVersion === 'v2' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                        >
-                            V2 Agent
-                        </button>
-                        <button
-                            onClick={() => setPromptVersion('v3')}
-                            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${promptVersion === 'v3' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                        >
-                            V3 Agent
-                        </button>
-                        <button
-                            onClick={() => setPromptVersion('v4')}
-                            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${promptVersion === 'v4' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                        >
-                            V4 Agent
-                        </button>
+                    {/* Agent Status */}
+                    <div className="flex items-center gap-2 bg-slate-100 px-4 py-2 rounded-lg border border-slate-200">
+                        <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                        <span className="text-xs font-bold text-slate-700">V4 Agent</span>
+                        <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">Active</span>
                     </div>
 
                     <button onClick={handleFileSelect} disabled={!!statusMessage}
@@ -763,7 +799,7 @@ export default function AudioStudio() {
                     {selectedFile && !statusMessage && (
                         <button onClick={handleStartProcess}
                             className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm animate-pulse">
-                            <Mic size={16} /> {queue.length > 1 ? `Sequential Process (${queue.length})` : "Start Agent"}
+                            <Mic size={16} /> {queue.length > 1 ? `Sequential Process (${queue.length})` : "Auto Transcribe"}
                         </button>
                     )}
 
@@ -772,12 +808,14 @@ export default function AudioStudio() {
                             <Clock size={14} /> {statusMessage}
                         </span>
                     )}
-                    {(currentJobId || queue.some(q => q.file === selectedFile && q.result?.zipBase64)) && (
+                    {(currentJobId || queue.some(q => q.file === selectedFile && q.result?.zipBase64) || (selectedFile && data.length > 0)) && (
                         <button onClick={handleDownloadZip}
-                            className="flex items-center gap-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm">
-                            <Download size={16} /> Download ZIP
+                            className="hidden lg:flex items-center gap-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm">
+                            <Download size={16} /> Data ZIP
                         </button>
                     )}
+
+
 
                     {/* New Feature Buttons */}
                     <button onClick={() => setShowSentiment(true)}

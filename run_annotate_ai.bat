@@ -1,8 +1,8 @@
 @echo off
-title Annotate.ai Launcher
+title Vyonix Studio Launcher
 
 echo ==================================================
-echo   Starting Annotate.ai Audio Studio
+echo   Starting Vyonix Studio
 echo ==================================================
 
 cd apps\web
@@ -10,14 +10,22 @@ cd apps\web
 echo [1/3] Checking dependencies...
 call npm install
 
-echo [2/3] Launching Browser...
-timeout /t 3 /nobreak >nul
-start "" "d:\Anodatasense\landing-page\modern-landing.html"
-
-echo [3/3] Starting Development Server...
-echo The app will be available at http://localhost:3000/audio
-echo Press Ctrl+C to stop the server.
+echo [2/3] Starting Development Server...
+echo The app will be available at http://localhost:3000
 echo.
 
-npm run dev
-pause
+:: Start the dev server in background
+start /b npm run dev
+
+echo [3/3] Waiting for server to start...
+timeout /t 10 /nobreak >nul
+
+:: Open browser to the correct localhost URL (NOT a file path)
+start "" "http://localhost:3000/landing-page/modern-landing.html"
+
+echo.
+echo Server is running. Press any key to stop...
+pause >nul
+
+:: Kill any node processes when done
+taskkill /f /im node.exe >nul 2>&1

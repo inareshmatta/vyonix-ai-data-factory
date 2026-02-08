@@ -656,7 +656,7 @@ export default function ImageStudio() {
                                 {/* Results Area */}
                                 <div className="flex-1 space-y-4">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Output Preview</label>
-                                    <div className="grid grid-cols-2 gap-4 h-full min-h-[400px]">
+                                    <div className="grid grid-cols-2 gap-4 auto-rows-max">
                                         {generatedImages.length === 0 ? (
                                             <div className="col-span-2 border-2 border-dashed border-slate-100 rounded-3xl flex flex-col items-center justify-center text-slate-300">
                                                 <ImageIcon size={48} className="opacity-20 mb-4" />

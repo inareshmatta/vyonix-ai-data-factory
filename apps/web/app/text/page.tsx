@@ -27,7 +27,13 @@ import {
     Type,
     Tag,
     AlertTriangle,
-    Sparkles
+    Sparkles,
+    Brain,
+    ThumbsUp,
+    ThumbsDown,
+    Minus,
+    MessageSquareQuote,
+    Share2
 } from 'lucide-react';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { trackUsage } from '@/lib/usage';
@@ -97,8 +103,15 @@ export default function NLPStudio() {
     const [searchTerm, setSearchTerm] = useState("");
     const [showJson, setShowJson] = useState(false);
 
+    // New NLP Features State
+    const [summary, setSummary] = useState("");
+    const [sentiment, setSentiment] = useState<"POSITIVE" | "NEUTRAL" | "NEGATIVE" | "">("");
+    const [topics, setTopics] = useState<string[]>([]);
+    const [relations, setRelations] = useState<{ source: string, target: string, relation: string }[]>([]);
+
     // Sidebar Manual Select State
     const [selectedManualText, setSelectedManualText] = useState("");
+    const [customLabel, setCustomLabel] = useState("");
 
     // Synthetic Data State
     const [showSynthetic, setShowSynthetic] = useState(false);
@@ -136,7 +149,13 @@ export default function NLPStudio() {
     const processFile = async (file: File) => {
         setIsProcessing(true);
         setProgress(10);
+        setIsProcessing(true);
+        setProgress(10);
         setData([]);
+        setSummary("");
+        setSentiment("");
+        setTopics([]);
+        setRelations([]);
 
         const interval = setInterval(() => {
             setProgress(p => p < 90 ? p + 1 : p);
@@ -157,7 +176,14 @@ export default function NLPStudio() {
             const result = await response.json();
 
             if (response.ok) {
+                // Handle new object format
                 let normalized = Array.isArray(result) ? result : (result.data || result.blocks || result.document || []);
+
+                // Set new insights
+                setSummary(result.summary || "");
+                setSentiment(result.sentiment || "");
+                setTopics(result.topics || []);
+                setRelations(result.relations || []);
 
                 // Self-Correction Logic: If indices are slightly drifted, find them in the text block
                 normalized = normalized.map((block: any) => ({
@@ -257,7 +283,9 @@ export default function NLPStudio() {
                 return block;
             });
         });
+
         setSelectedManualText("");
+        setCustomLabel("");
         window.getSelection()?.removeAllRanges();
     };
 
@@ -337,11 +365,7 @@ export default function NLPStudio() {
                         {isProcessing ? <span className="animate-spin text-sm">↻</span> : <UploadCloud size={16} className="group-hover:-translate-y-0.5 transition-transform" />}
                         {isProcessing ? 'Analyzing Pipeline...' : 'Upload Dataset'}
                     </button>
-                    <button onClick={handleUpload} disabled={isProcessing}
-                        className="group flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-xl text-sm font-black transition-all shadow-lg shadow-indigo-500/20 active:scale-95 disabled:opacity-50">
-                        {isProcessing ? <span className="animate-spin text-sm">↻</span> : <UploadCloud size={16} className="group-hover:-translate-y-0.5 transition-transform" />}
-                        {isProcessing ? 'Analyzing Pipeline...' : 'Upload Dataset'}
-                    </button>
+
                     <button onClick={() => setShowSynthetic(true)}
                         className="flex items-center gap-2 bg-pink-600 hover:bg-pink-500 text-white px-4 py-2 rounded-xl text-sm font-black transition-all shadow-lg shadow-pink-500/20 active:scale-95">
                         <Sparkles size={16} /> Generate Data
@@ -376,6 +400,79 @@ export default function NLPStudio() {
                                         {redactionMode ? <EyeOff size={14} /> : <Eye size={14} />}
                                         {redactionMode ? 'AUDIT MODE ACTIVE' : 'OBSERVATION MODE'}
                                     </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Analysis Dashboard (New) */}
+                        {data.length > 0 && summary && (
+                            <div className="grid grid-cols-12 gap-6 p-8 border-b border-slate-100 bg-slate-50/50">
+                                {/* Summary Card */}
+                                <div className="col-span-12 lg:col-span-6 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                                    <div className="flex items-center gap-2 mb-3 text-indigo-600">
+                                        <MessageSquareQuote size={18} />
+                                        <span className="text-xs font-black uppercase tracking-widest">Executive Summary</span>
+                                    </div>
+                                    <p className="text-sm text-slate-600 leading-relaxed font-medium">{summary}</p>
+                                </div>
+
+                                {/* Sentiment & Topics */}
+                                <div className="col-span-12 lg:col-span-6 space-y-4">
+                                    {/* Sentiment */}
+                                    <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                                        <div className="flex items-center gap-2 text-indigo-600">
+                                            <Brain size={18} />
+                                            <span className="text-xs font-black uppercase tracking-widest">Sentiment Analysis</span>
+                                        </div>
+                                        <div className={`px-4 py-1.5 rounded-full text-xs font-black flex items-center gap-2 uppercase tracking-wide
+                                            ${sentiment === 'POSITIVE' ? 'bg-emerald-100 text-emerald-700' :
+                                                sentiment === 'NEGATIVE' ? 'bg-rose-100 text-rose-700' :
+                                                    'bg-slate-100 text-slate-700'}`}>
+                                            {sentiment === 'POSITIVE' && <ThumbsUp size={14} />}
+                                            {sentiment === 'NEGATIVE' && <ThumbsDown size={14} />}
+                                            {sentiment === 'NEUTRAL' && <Minus size={14} />}
+                                            {sentiment}
+                                        </div>
+                                    </div>
+
+                                    {/* Topics */}
+                                    <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                                        <div className="flex items-center gap-2 mb-3 text-indigo-600">
+                                            <Tag size={18} />
+                                            <span className="text-xs font-black uppercase tracking-widest">Key Topics</span>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                            {topics.map((topic, i) => (
+                                                <span key={i} className="px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-lg text-[11px] font-bold">
+                                                    #{topic}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Relations (New) */}
+                                    {relations.length > 0 && (
+                                        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                                            <div className="flex items-center gap-2 mb-3 text-indigo-600">
+                                                <Share2 size={18} />
+                                                <span className="text-xs font-black uppercase tracking-widest">Key Relationships</span>
+                                            </div>
+                                            <div className="space-y-2 max-h-40 overflow-y-auto custom-scrollbar pr-2">
+                                                {relations.map((rel, i) => (
+                                                    <div key={i} className="flex items-center justify-between text-[10px] font-bold bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                                        <span className="text-slate-700 truncate max-w-[30%]">{rel.source}</span>
+                                                        <div className="flex items-center px-2 text-indigo-400">
+                                                            <div className="h-px w-3 bg-indigo-200"></div>
+                                                            <span className="px-1 uppercase text-[8px]">{rel.relation}</span>
+                                                            <div className="h-px w-3 bg-indigo-200"></div>
+                                                            <span className="ml-[1px]">›</span>
+                                                        </div>
+                                                        <span className="text-slate-700 truncate max-w-[30%] text-right">{rel.target}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -455,8 +552,8 @@ export default function NLPStudio() {
                     </div>
 
                     {/* Manual Annotation Area (DYNAMIC) */}
-                    <div className={`transition-all duration-500 overflow-hidden ${selectedManualText ? 'max-h-[500px] border-b border-indigo-500/30' : 'max-h-0'}`}>
-                        <div className="p-8 bg-indigo-500/5">
+                    <div className={`transition-all duration-500 overflow-hidden bg-[#1e293b] ${selectedManualText ? 'max-h-[600px] border-b border-indigo-500/30 shadow-indigo-500/20 shadow-inner' : 'max-h-0'}`}>
+                        <div className="p-8 pb-10 bg-indigo-500/5">
                             <div className="flex items-center justify-between mb-4">
                                 <div className="flex items-center gap-2">
                                     <Tag className="text-indigo-400" size={16} />
@@ -464,25 +561,53 @@ export default function NLPStudio() {
                                 </div>
                                 <button onClick={() => setSelectedManualText("")} className="text-slate-500 hover:text-white"><X size={16} /></button>
                             </div>
-                            <div className="p-4 bg-[#0f172a] border border-slate-700 rounded-2xl text-sm italic text-slate-400 mb-6 bg-indigo-500/5 line-clamp-2">
+                            <div className="p-4 bg-[#0f172a] border border-slate-700/50 rounded-2xl text-sm italic text-slate-300 mb-6 bg-indigo-500/10 line-clamp-3 shadow-inner">
                                 "{selectedManualText}"
                             </div>
-                            <div className="grid grid-cols-2 gap-2">
-                                {commonTags.map(tag => (
-                                    <button
-                                        key={tag}
-                                        onClick={() => addManualEntity(tag)}
-                                        className="text-[10px] font-black bg-[#1e293b] hover:bg-indigo-600 text-slate-400 hover:text-white border border-slate-700 hover:border-indigo-500 px-3 py-2 rounded-xl transition-all duration-200 text-left capitalize truncate"
-                                    >
-                                        + {tag.toLowerCase()}
-                                    </button>
-                                ))}
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Quick Apply</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {commonTags.slice(0, 6).map(tag => (
+                                            <button
+                                                key={tag}
+                                                onClick={() => addManualEntity(tag)}
+                                                className="text-[10px] font-black bg-[#1e293b] hover:bg-indigo-600 text-slate-400 hover:text-white border border-slate-700 hover:border-indigo-500 px-3 py-2.5 rounded-xl transition-all duration-200 text-left capitalize truncate flex items-center gap-2 group"
+                                            >
+                                                <span className="w-1.5 h-1.5 rounded-full bg-slate-600 group-hover:bg-white transition-colors"></span>
+                                                {tag}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Custom Label</label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            value={customLabel}
+                                            onChange={(e) => setCustomLabel(e.target.value)}
+                                            placeholder="e.g. PROJECT_CODE"
+                                            className="flex-1 bg-[#0f172a] border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white placeholder:text-slate-600 focus:border-indigo-500 outline-none uppercase"
+                                            onKeyDown={(e) => e.key === 'Enter' && customLabel && addManualEntity(customLabel)}
+                                        />
+                                        <button
+                                            onClick={() => customLabel && addManualEntity(customLabel)}
+                                            disabled={!customLabel}
+                                            className="bg-indigo-600 text-white px-3 rounded-xl disabled:opacity-50 hover:bg-indigo-500 transition-colors"
+                                        >
+                                            <Plus size={16} />
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     {/* Explorer Tabs */}
-                    <div className="flex-1 flex flex-col min-h-0">
+                    <div className="flex-1 flex flex-col min-h-0 bg-[#1e293b]">
                         <div className="p-8 py-6 space-y-6">
                             <div className="relative group">
                                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors" size={16} />
