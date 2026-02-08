@@ -21,18 +21,15 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
                 return;
             }
 
-            const session = localStorage.getItem('vyonix_session');
-            const authTime = localStorage.getItem('vyonix_auth_time');
-            const version = localStorage.getItem('vyonix_version');
-            const CURRENT_VERSION = 'v1.1'; // Bump this to force logout
+            // Use sessionStorage - clears when browser tab is closed or page is refreshed
+            const session = sessionStorage.getItem('vyonix_session');
+            const authTime = sessionStorage.getItem('vyonix_auth_time');
 
-            // Session expires after 24 hours
-            const isExpired = authTime && (Date.now() - parseInt(authTime) > 86400000);
+            // Session expires after 1 hour (or on refresh/close)
+            const isExpired = authTime && (Date.now() - parseInt(authTime) > 3600000);
 
-            if (!session || !HASHES.includes(session) || isExpired || version !== CURRENT_VERSION) {
-                localStorage.removeItem('vyonix_session');
-                localStorage.removeItem('vyonix_auth_time');
-                localStorage.removeItem('vyonix_version');
+            if (!session || !HASHES.includes(session) || isExpired) {
+                sessionStorage.clear();
                 // Redirect to the static landing page
                 window.location.href = '/landing-page/modern-landing.html';
                 return;
