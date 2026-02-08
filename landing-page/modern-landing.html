@@ -519,6 +519,7 @@
             <div style="display: flex; align-items: center; gap: 12px;">
                 <img src="https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg" alt="Google"
                     class="partner-logo">
+                <span style="font-size: 0.95rem; font-weight: 700; letter-spacing: 0.5px; opacity: 0.9;">Google</span>
             </div>
             <div style="display: flex; align-items: center; gap: 12px;">
                 <!-- Inline Gemini Logo -->
@@ -756,7 +757,7 @@
             modal.classList.add('active');
             codeInput.focus();
             document.getElementById('modal-title').innerText = (type === 'TRIAL' ? "Developer Access" : "Judge Verification");
-            document.getElementById('modal-subtitle').innerText = "Enter your unique VYX product key.";
+            document.getElementById('modal-subtitle').innerText = "Enter the 16-character VYX Product Key.";
         }
 
         function closeModal() { modal.classList.remove('active'); codeInput.value = ''; }
