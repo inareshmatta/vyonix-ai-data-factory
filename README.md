@@ -62,9 +62,9 @@ graph TD
 
     subgraph "Backend Intelligence (API Routes)"
         API_AI[api/ai/* - Model Interaction]
-        AudioProc[Audio Processor\n(PCM L16 <-> WAV Injection)]
-        VisionProc[Coordinate Mapper\n(0-1000 Normalization)]
-        NLPProc[Token Corrector\n(Index Self-Correction)]
+        AudioProc["Audio Processor\n(PCM L16 to WAV Injection)"]
+        VisionProc["Coordinate Mapper\n(0-1000 Normalization)"]
+        NLPProc["Token Corrector\n(Index Self-Correction)"]
     end
 
     subgraph "Google Cloud (Antigravity)"
