@@ -933,6 +933,7 @@
                 // Persistent Session
                 localStorage.setItem('vyonix_session', hashedInput);
                 localStorage.setItem('vyonix_auth_time', Date.now());
+                localStorage.setItem('vyonix_version', 'v1.1'); // Required by AuthGuard
 
                 document.body.style.transition = 'opacity 1s, filter 1s';
                 document.body.style.filter = 'blur(20px)';
