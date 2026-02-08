@@ -43,6 +43,51 @@ Vyonix Studio is a **Multimodal AI Data Factory powered entirely by Gemini 3's n
 
 I leveraged **Gemini 3's complete multimodal stack** as the singular intelligence layer:
 
+### 🏗️ Architecture
+
+```mermaid
+graph TD
+    User((User))
+    subgraph "Vyonix Studio (Next.js Application)"
+        UI[Glassmorphism UI]
+        subgraph "Core Engines"
+            Audio[🎙️ Audio Intelligence Pro]
+            Vision[👁️ Vision Pro Studio]
+            NLP[📝 NLP Engine Pro]
+        end
+        UI --> Audio
+        UI --> Vision
+        UI --> NLP
+    end
+
+    subgraph "Backend Intelligence (API Routes)"
+        API_AI[api/ai/* - Model Interaction]
+        AudioProc[Audio Processor\n(PCM L16 <-> WAV Injection)]
+        VisionProc[Coordinate Mapper\n(0-1000 Normalization)]
+        NLPProc[Token Corrector\n(Index Self-Correction)]
+    end
+
+    subgraph "Google Cloud (Antigravity)"
+        GeminiFlash[⚡ Gemini 3 Flash\n(Transcription, Object Detection, NER)]
+        GeminiPro[🧠 Gemini 3 Pro\n(Reasoning, Image Gen)]
+        GeminiTTS[🗣️ Gemini 2.5 TTS\n(Speech Synthesis)]
+    end
+
+    Audio --> API_AI
+    Vision --> API_AI
+    NLP --> API_AI
+
+    API_AI --> AudioProc
+    API_AI --> VisionProc
+    API_AI --> NLPProc
+
+    AudioProc <--> GeminiFlash
+    AudioProc <--> GeminiTTS
+    VisionProc <--> GeminiFlash
+    VisionProc <--> GeminiPro
+    NLPProc <--> GeminiFlash
+```
+
 - **Gemini 3 Flash** powers real-time audio transcription with rhythmic understanding of Indian accents, zero-shot object detection with 0-1000 normalized coordinates, and NER across 10+ entity types
 - **Gemini 3 Pro** generates photorealistic synthetic images for training data
 - **Gemini 2.5 TTS** creates professional-grade vocal assets
@@ -54,6 +99,28 @@ The beauty is that **Gemini 3's native multimodal understanding** eliminates the
 - **Frontend**: High-performance glassmorphism interface with interactive tools
 - **Deployment**: Google Antigravity cloud platform
 - **API Integration**: Gemini Batch API for 50% cost reduction
+
+### 📂 Folder Structure
+```
+vyonix-studio/
+├── apps/
+│   └── web/
+│       ├── app/
+│       │   ├── api/             # Backend API Routes
+│       │   │   ├── ai/          # Gemini Model Integrations
+│       │   │   ├── history/     # Job Tracking
+│       │   │   └── utils/       # Shared Utilities
+│       │   ├── audio/           # Audio Studio (Transcription/TTS)
+│       │   ├── video/           # Video Studio (Object Detection)
+│       │   ├── text/            # NLP Engine (NER/PII)
+│       │   ├── image/           # Image Generation (Flux/Gemini)
+│       │   └── layout.tsx       # Root Layout & Global Styles
+│       ├── components/          # Reusable UI Components
+│       ├── contexts/            # Global State Management
+│       ├── lib/                 # Utilities & Gemini Clients
+│       └── public/              # Static Assets
+└── README.md                    # Project Documentation
+```
 
 ### The "Vibe Coding" Philosophy:
 My approach was using **English and intent as my programming language**, letting **Gemini 3 handle everything** from low-level byte manipulation to UI architecture. **Gemini 3's reasoning capabilities** allowed me to describe complex technical requirements in plain language and receive production-grade implementations.
