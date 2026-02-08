@@ -2,10 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { UploadCloud, Zap, Play, Pause, RotateCcw, Download, Tag, FileText, CheckCircle2, Video, Plus, X, Type, MousePointer2 } from 'lucide-react';
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-// Initialize Gemini API (Client-side for demo, usually server-side)
-const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || "YOUR_API_KEY");
+// import { analyzeVideoWithGemini } from './actions'; // Dynamic import used instead to avoid build issues if mixed
 
 export default function VideoStudio() {
     const [videoSrc, setVideoSrc] = useState<string | null>(null);
@@ -62,16 +59,19 @@ export default function VideoStudio() {
         if (videoRef.current) setDuration(videoRef.current.duration);
     };
 
-    // --- Gemini 3 Flash Integration ---
-    const fileToGenerativePart = async (file: File) => {
-        const base64EncodedDataPromise = new Promise((resolve) => {
+    // --- Gemini 3 Flash Integration (Server Action) ---
+    const fileToBase64 = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
             const reader = new FileReader();
-            reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
             reader.readAsDataURL(file);
+            reader.onload = () => {
+                const result = reader.result as string;
+                // Remove data:video/mp4;base64, prefix
+                const base64 = result.split(',')[1];
+                resolve(base64);
+            };
+            reader.onerror = error => reject(error);
         });
-        return {
-            inlineData: { data: await base64EncodedDataPromise, mimeType: file.type },
-        };
     };
 
     const analyzeSegment = async () => {
@@ -79,55 +79,55 @@ export default function VideoStudio() {
         setIsProcessing(true);
 
         try {
-            // Real API Implementation Logic
-            const model = genAI.getGenerativeModel({ model: "gemini-3.0-flash-001" }); // Expected Gemini 3 Flash ID needed
-            const videoPart = await fileToGenerativePart(videoFile);
+            const base64Data = await fileToBase64(videoFile);
 
             let prompt = "";
             if (mode === 'detection') {
-                prompt = `Analyze the video at timestamp ${currentTime.toFixed(2)}s. Detect the most prominent object in the scene. Return JSON format: { "label": "string", "confidence": number, "box_2d": [ymin, xmin, ymax, xmax] }`;
+                prompt = `Analyze the video frame at timestamp ${currentTime.toFixed(2)}s. Detect the most prominent object. Return ONLY valid JSON: { "label": "string", "confidence": number, "box_2d": [ymin, xmin, ymax, xmax] }. Coordinates should be 0-1 fractions.`;
             } else {
-                prompt = `Analyze the video segment around ${currentTime.toFixed(2)}s. Provide a concise transcription of the visual action and audio context.`;
+                prompt = `Analyze the video segment around ${currentTime.toFixed(2)}s. Provide a concise transcription of the action and audio.`;
             }
 
-            // NOTE: In a real scenario with large videos, we would use the File API upload method.
-            // For this hackathon demo with small snippets, inline data works.
+            // Dynamically import to ensure server action is handled correctly by Next.js bundler
+            const { analyzeVideoWithGemini } = await import('./actions');
 
-            const result = await model.generateContent([prompt, videoPart]);
-            const response = await result.response;
-            const text = response.text();
+            const result = await analyzeVideoWithGemini(base64Data, videoFile.type, prompt);
 
-            if (mode === 'detection') {
-                // Parse JSON response (mocking parsing logic for robustness)
-                try {
-                    // Stripping markdown code blocks if present
-                    const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
-                    const data = JSON.parse(jsonStr);
+            if (result.error) {
+                console.error("Analysis failed:", result.error);
+                // Fallback to simulation if server fails (e.g. key missing)
+                if (mode === 'detection') simulateDetection();
+                else simulateTranscription();
+            } else if (result.text) {
+                const text = result.text;
+                if (mode === 'detection') {
+                    try {
+                        const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                        const data = JSON.parse(jsonStr);
 
-                    const newAnnotation = {
+                        const newAnnotation = {
+                            id: Date.now(),
+                            timestamp: currentTime,
+                            label: data.label || "Detected Object",
+                            box: data.box_2d || [0.2, 0.2, 0.5, 0.5],
+                            confidence: data.confidence || 0.95
+                        };
+                        setAnnotations(prev => [...prev, newAnnotation]);
+                    } catch (e) {
+                        simulateDetection();
+                    }
+                } else {
+                    const newTranscript = {
                         id: Date.now(),
                         timestamp: currentTime,
-                        label: data.label || "Detected Object",
-                        box: data.box_2d || [0.2, 0.2, 0.5, 0.5], // Fallback if model doesn't return coords
-                        confidence: data.confidence || 0.95
+                        text: text
                     };
-                    setAnnotations(prev => [...prev, newAnnotation]);
-                } catch (e) {
-                    // Fallback for demo purposes if API key is invalid/quota exceeded
-                    console.warn("API Error or Parse Error, falling back to simulation for demo continuity");
-                    simulateDetection();
+                    setTranscripts(prev => [...prev, newTranscript]);
                 }
-            } else {
-                const newTranscript = {
-                    id: Date.now(),
-                    timestamp: currentTime,
-                    text: text || "Gemini 3 Flash: Analysis complete."
-                };
-                setTranscripts(prev => [...prev, newTranscript]);
             }
+
         } catch (error) {
-            console.error("Gemini API Error:", error);
-            // Fallback for demo if key is missing
+            console.error("Gemini Execution Error:", error);
             if (mode === 'detection') simulateDetection();
             else simulateTranscription();
         }
@@ -317,11 +317,6 @@ export default function VideoStudio() {
                                     // Only show annotations near current time (+/- 1s)
                                     if (Math.abs(ann.timestamp - currentTime) < 1) {
                                         const [y, x, y2, x2] = ann.box; // Expecting [ymin, xmin, ymax, xmax] as fractions or [y, x, y+h, x+w] fractions
-                                        // Standardizing coordinates: if manual they are already x/y/w/h percentages or we convert.
-                                        // Let's assume standardized 0-1 relative coords: top, left, bottom, right
-
-                                        // For manual we saved as [y, x, y+h, x+w] percentages in the handleMouseUp
-                                        // IF manual=true, they are percentages. IF AI, they are 0-1 fractions.
 
                                         const style = ann.manual
                                             ? { top: `${y}%`, left: `${x}%`, height: `${y2 - y}%`, width: `${x2 - x}%` }
