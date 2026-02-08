@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { UploadCloud, Zap, Play, Pause, RotateCcw, Download, Tag, FileText, CheckCircle2, Video, Plus, X, Type, MousePointer2 } from 'lucide-react';
+import { UploadCloud, Zap, Play, Pause, RotateCcw, Download, Tag, FileText, CheckCircle2, Video, Plus, X, Type, MousePointer2, Sparkles, Loader2 } from 'lucide-react';
 // import { analyzeVideoWithGemini } from './actions'; // Dynamic import used instead to avoid build issues if mixed
 
 export default function VideoStudio() {
@@ -14,8 +14,13 @@ export default function VideoStudio() {
     const [duration, setDuration] = useState(0);
 
     // Modes
-    const [mode, setMode] = useState<'detection' | 'transcription'>('detection');
+    const [mode, setMode] = useState<'detection' | 'transcription' | 'generation'>('detection');
     const [tool, setTool] = useState<'pointer' | 'box'>('pointer');
+
+    // Generation State
+    const [genPrompt, setGenPrompt] = useState('');
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
 
     // Data Structures
     const [annotations, setAnnotations] = useState<any[]>([]);
@@ -95,9 +100,8 @@ export default function VideoStudio() {
 
             if (result.error) {
                 console.error("Analysis failed:", result.error);
-                // Fallback to simulation if server fails (e.g. key missing)
-                if (mode === 'detection') simulateDetection();
-                else simulateTranscription();
+                alert(`API Error: ${result.error}`);
+                // Only simulate if API is completely unreachable, not on parse errors
             } else if (result.text) {
                 const text = result.text;
                 if (mode === 'detection') {
@@ -114,7 +118,9 @@ export default function VideoStudio() {
                         };
                         setAnnotations(prev => [...prev, newAnnotation]);
                     } catch (e) {
-                        simulateDetection();
+                        // Parse failed - show raw text to user, don't simulate
+                        console.warn("Could not parse JSON from API response. Raw text:", text);
+                        alert(`AI returned non-JSON response. Raw: ${text.substring(0, 200)}...`);
                     }
                 } else {
                     const newTranscript = {
@@ -128,8 +134,7 @@ export default function VideoStudio() {
 
         } catch (error) {
             console.error("Gemini Execution Error:", error);
-            if (mode === 'detection') simulateDetection();
-            else simulateTranscription();
+            alert(`Execution Error: ${error}`);
         }
 
         setIsProcessing(false);
@@ -240,13 +245,19 @@ export default function VideoStudio() {
                         onClick={() => setMode('detection')}
                         className={`px-4 py-1.5 rounded-md text-sm font-bold flex items-center gap-2 transition-all ${mode === 'detection' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                     >
-                        <Tag size={14} /> Object Detection
+                        <Tag size={14} /> Detection
                     </button>
                     <button
                         onClick={() => setMode('transcription')}
                         className={`px-4 py-1.5 rounded-md text-sm font-bold flex items-center gap-2 transition-all ${mode === 'transcription' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                     >
                         <FileText size={14} /> Transcription
+                    </button>
+                    <button
+                        onClick={() => setMode('generation')}
+                        className={`px-4 py-1.5 rounded-md text-sm font-bold flex items-center gap-2 transition-all ${mode === 'generation' ? 'bg-white text-violet-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                        <Sparkles size={14} /> Generate
                     </button>
                 </div>
 
@@ -367,8 +378,8 @@ export default function VideoStudio() {
                                     onClick={analyzeSegment}
                                     disabled={isProcessing}
                                     className={`px-6 py-2 rounded-xl font-bold text-sm text-white shadow-lg transition-all flex items-center gap-2 ${mode === 'detection'
-                                            ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200'
-                                            : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200'
+                                        ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200'
+                                        : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200'
                                         }`}
                                 >
                                     {isProcessing ? <RotateCcw className="animate-spin" size={16} /> : <Zap size={16} />}
@@ -376,6 +387,57 @@ export default function VideoStudio() {
                                 </button>
                             </div>
                         </>
+                    ) : mode === 'generation' ? (
+                        <div className="flex-1 flex flex-col items-center justify-center p-8 text-slate-600">
+                            <div className="w-full max-w-lg bg-white rounded-3xl border border-slate-200 shadow-lg p-8">
+                                <div className="text-center mb-6">
+                                    <Sparkles size={40} className="mx-auto text-violet-500 mb-4" />
+                                    <h2 className="text-2xl font-black text-slate-800">Veo 3.1 Video Generation</h2>
+                                    <p className="text-sm text-slate-500 mt-2">Create synthetic training videos from text descriptions</p>
+                                </div>
+
+                                <textarea
+                                    value={genPrompt}
+                                    onChange={(e) => setGenPrompt(e.target.value)}
+                                    placeholder="Describe the video you want to generate... (e.g., 'A person walking through a busy street, daylight, urban environment')"
+                                    className="w-full h-32 p-4 border border-slate-200 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                                />
+
+                                <button
+                                    onClick={async () => {
+                                        if (!genPrompt.trim()) return alert('Please enter a prompt');
+                                        setIsGenerating(true);
+                                        try {
+                                            const { generateVideoWithVeo } = await import('./videoGenActions');
+                                            const result = await generateVideoWithVeo(genPrompt);
+                                            if (result.error) {
+                                                alert(`Generation Error: ${result.error}`);
+                                            } else if (result.videoUrl) {
+                                                setGeneratedVideoUrl(result.videoUrl);
+                                                alert('Video generated! Check the preview below.');
+                                            }
+                                        } catch (e: any) {
+                                            alert(`Error: ${e.message}`);
+                                        }
+                                        setIsGenerating(false);
+                                    }}
+                                    disabled={isGenerating || !genPrompt.trim()}
+                                    className="w-full mt-4 py-3 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isGenerating ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
+                                    {isGenerating ? 'Generating (this takes ~2 min)...' : 'Generate Synthetic Video'}
+                                </button>
+
+                                {generatedVideoUrl && (
+                                    <div className="mt-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+                                        <p className="text-sm font-bold text-emerald-700 mb-2">✓ Video Generated</p>
+                                        <a href={generatedVideoUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-600 underline break-all">
+                                            {generatedVideoUrl}
+                                        </a>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     ) : (
                         <div className="flex-1 flex flex-col items-center justify-center text-slate-400">
                             <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center mb-4">
@@ -408,8 +470,8 @@ export default function VideoStudio() {
                                             if (videoRef.current) videoRef.current.currentTime = ann.timestamp;
                                         }}
                                         className={`p-3 rounded-xl border transition-colors cursor-pointer group ${Math.abs(ann.timestamp - currentTime) < 1
-                                                ? 'bg-indigo-100 border-indigo-200'
-                                                : 'bg-indigo-50 border-indigo-100 hover:bg-indigo-100'
+                                            ? 'bg-indigo-100 border-indigo-200'
+                                            : 'bg-indigo-50 border-indigo-100 hover:bg-indigo-100'
                                             }`}
                                     >
                                         <div className="flex justify-between items-start mb-1">
