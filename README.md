@@ -119,8 +119,8 @@ Coming from a non-technical background, understanding buffer processing and audi
 
 🔄 **Fine-tuning Pipelines** so data annotated by **Gemini 3** flows directly into custom model training—closing the loop from synthesis to deployment
 
-� **Commercialize and Professional UI/UX Pipelines **
-Start marketing to Indian AI start ups and commercialize , Improve UI and UX make it more professional 
+🚀 **Commercialization & Enterprise UX/UI**
+Launching go-to-market strategies for Indian AI startups while elevating the platform to a professional, enterprise-grade standard. 
 
 ### Industry Specialization:
 🏥 **Medical Imaging Module** showcasing **Gemini 3's domain adaptability** without retraining
@@ -137,7 +137,7 @@ I want Vyonix to become the standard platform that proves **Gemini 3's multimoda
 
 ---
 
-## � Impact: The Time Compression Revolution
+## 📈 Impact: The Time Compression Revolution
 
 | Phase | Traditional Method | Vyonix (Gemini 3) |
 |:------|:-------------------|:------------------|
@@ -148,7 +148,7 @@ I want Vyonix to become the standard platform that proves **Gemini 3's multimoda
 
 ---
 
-## � Economic Transformation
+## 💰 Economic Transformation
 
 **50% Cost Reduction** via Gemini Batch API
 - 2,300-hour transcription project: From "prohibitive" to "profitable"
