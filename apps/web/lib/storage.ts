@@ -3,7 +3,7 @@ import path from 'path';
 import archiver from 'archiver';
 import { v4 as uuidv4 } from 'uuid';
 
-// Cloud Run / Production Check - K_SERVICE is standard in Cloud Run
+// Production Environment Check
 const IS_CLOUD = process.env.NODE_ENV === 'production' || !!process.env.K_SERVICE || !!process.env.PORT;
 
 const STORAGE_ROOT = IS_CLOUD

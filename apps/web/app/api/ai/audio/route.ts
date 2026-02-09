@@ -199,11 +199,10 @@ export async function POST(req: NextRequest) {
                 );
                 jobInfo = info;
             } catch (storageErr) {
-                console.warn("[Audio API] Note: Failed to save persistent history (this is expected on Cloud Run if volumes aren't mounted).", storageErr);
+                console.warn("[Audio API] Note: Failed to save persistent history.", storageErr);
             }
 
-            // Generate downloadable ZIP as Base64 for Cloud Run compatibility
-            // (Cloud Run filesystem is ephemeral, so we return data directly)
+            // Generate downloadable ZIP as Base64 for compatibility
             const downloadJsonString = JSON.stringify(formattedData, null, 2);
             const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_').replace(/\.[^/.]+$/, "");
 
@@ -238,7 +237,7 @@ export async function POST(req: NextRequest) {
                 data: sanitizedData,
                 jobId: jobInfo.jobId,
                 zipPath: jobInfo.zipPath,
-                // For Cloud Run: return ZIP directly so frontend can download without second request
+                // Return ZIP directly so frontend can download without second request
                 zipBase64: zipBase64,
                 zipFileName: `${safeName}_vyonix.zip`
             });

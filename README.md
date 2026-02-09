@@ -48,7 +48,7 @@ The biggest bottleneck in AI today isn't models—it's **data**. Most teams spen
 ```mermaid
 graph TD
     User["User Interface\n(Next.js / Tailwind CSS)"] 
-    API["API Gateway\n(Cloud Run)"]
+    API["API Gateway\n(Serverless Node.js)"]
     
     subgraph "Multimodal Intelligence Suite"
         GeminiFlash["⚡ Gemini 3 Flash\n(Transcription, Object Detection, NER)"]
@@ -64,10 +64,10 @@ graph TD
     end
     
     User <--> API
-    API <-> GeminiFlash
-    API <-> GeminiPro
-    API <-> GeminiTTS
-    API <-> Veo
+    API <--> GeminiFlash
+    API <--> GeminiPro
+    API <--> GeminiTTS
+    API <--> Veo
     
     GeminiFlash --> AudioProc
     GeminiFlash --> VisionProc
@@ -78,11 +78,43 @@ graph TD
     NLPProc --> User
 ```
 
+## 📂 Repository Structure
+```mermaid
+graph TD
+    Root["📂 vyonix-ai-data-factory"]
+    
+    subgraph "Core Application"
+        App["📂 apps/web"]
+        AppCode["📂 app"]
+        AppComps["📂 components"]
+        AppLib["📂 lib"]
+        AppPublic["📂 public"]
+        
+        App --> AppCode
+        App --> AppComps
+        App --> AppLib
+        App --> AppPublic
+    end
+    
+    subgraph "Data Engine"
+        Data["📂 data"]
+        Jobs["📂 jobs"]
+        
+        Data --> Jobs
+        Jobs --> Raw["📄 Input Media"]
+        Jobs --> Processed["📄 JSON Output"]
+    end
+    
+    Root --> App
+    Root --> Data
+    Root --> Config["⚙️ Config Files"]
+```
+
 ---
 
 ## 🛠️ Technical Implementation
 - **Frontend**: Next.js 14 (App Router), Tailwind CSS, Framer Motion for "Glassmorphism" UI.
-- **Backend**: Node.js APIs on Google Cloud Run.
+- **Backend**: Serverless Node.js APIs (Auto-scaling).
 - **AI Core**: Google Generative AI SDK (Gemini 1.5/3.0).
 - **Video Engine**: Custom React Canvas wrapper for frame-accurate bounding box rendering.
 

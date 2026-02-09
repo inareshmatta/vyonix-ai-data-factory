@@ -38,5 +38,19 @@ next-env.d.ts
 **/data/jobs/*
 !**/data/jobs/.gitkeep
 
-# Exclude Public Export (Generated Artifact)
+# Exclude Public Export
 vyonix-public-export/
+
+# Exclude Documentation (User Request)
+docs/
+*.md
+.agent/
+brain/
+!README.md
+!README_PUBLIC.md
+!LICENSE
+!LICENSE.md
+
+# Exclude Cloud Run configs
+budget-enforcer/
+landing-page/

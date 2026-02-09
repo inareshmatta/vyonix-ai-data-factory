@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
                 }
 
                 if (imageBase64) {
-                    // Cloud Run is ephemeral, so saving files to 'public' usually doesn't work as expected 
+                    // Environment is ephemeral, so saving files to 'public' may not work as expected 
                     // (they don't persist and aren't served correctly if not present at build time).
                     // We will return the image directly as a Base64 Data URI.
                     const mimeType = "image/png"; // Gemini usually returns PNG data

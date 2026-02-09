@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
         // Generate filename for client-side use
         const filename = `synthetic_text_${uuidv4()}.txt`;
 
-        // Return text directly - no file save needed for Cloud Run
+        // Return text directly
         return NextResponse.json({
             success: true,
             text: generatedText,
