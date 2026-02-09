@@ -37,3 +37,6 @@ next-env.d.ts
 # data
 **/data/jobs/*
 !**/data/jobs/.gitkeep
+
+# Exclude Public Export (Generated Artifact)
+vyonix-public-export/
