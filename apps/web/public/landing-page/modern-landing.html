@@ -462,6 +462,40 @@
             letter-spacing: -3px;
         }
 
+        @media (max-width: 768px) {
+            #hero {
+                padding-top: 140px;
+                /* Prevent nav overlap */
+                height: auto;
+                min-height: 100vh;
+            }
+
+            .hero-title {
+                font-size: 3rem;
+                opacity: 1 !important;
+                /* Force visible */
+                transform: none !important;
+            }
+
+            .hero-subtitle {
+                font-size: 1.1rem;
+                opacity: 1 !important;
+                /* Force visible */
+                transform: none !important;
+            }
+
+            .feature {
+                opacity: 1 !important;
+                /* Force visible */
+                transform: none !important;
+            }
+
+            .nav-right {
+                display: none;
+                /* Hide desktop nav items on mobile if needed */
+            }
+        }
+
         @media (max-width: 1024px) {
             .scroll-content {
                 flex-direction: column !important;
@@ -568,7 +602,6 @@
             <div style="display: flex; align-items: center; gap: 12px;">
                 <img src="https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg" alt="Google"
                     class="partner-logo">
-                <span style="font-size: 0.95rem; font-weight: 700; letter-spacing: 0.5px; opacity: 0.9;">Google</span>
             </div>
             <div style="display: flex; align-items: center; gap: 12px;">
                 <!-- Inline Gemini Logo -->
@@ -583,8 +616,6 @@
             <div style="display: flex; align-items: center; gap: 12px;">
                 <img src="https://upload.wikimedia.org/wikipedia/commons/5/51/Google_Cloud_logo.svg" alt="Google Cloud"
                     class="partner-logo" style="height: 28px;">
-                <span style="font-size: 0.95rem; font-weight: 700; letter-spacing: 0.5px; opacity: 0.9;">Google
-                    Cloud</span>
             </div>
         </div>
 
