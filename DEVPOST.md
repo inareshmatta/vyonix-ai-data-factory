@@ -24,101 +24,75 @@ It is NOT just a passive analyzer. It is a **Human-AI Collaboration System** wit
 ### 🎙️ **Audio Intelligence Studio**
 **AI-Powered Features:**
 - ✅ **Precision Transcription**: Sub-word timestamp accuracy (HH:MM:SS.mmm format)
-- ✅ **Indian Accent Mastery**: Handles Hinglish and regional phonetics where global models fail
-- ✅ **Sentiment Analysis**: Visualizes pitch, mood (Joy/Anger/Sadness), and speaker shifts
-- ✅ **Professional TTS**: Generates vocal assets using Gemini 2.5 TTS with emotional range
+- ✅ **Indian Accent Mastery**: Handles Hinglish and regional phonetic nuances.
+- ✅ **Sentiment Analysis**: Visualizes pitch, mood (Joy/Anger/Sadness), and speaker shifts.
+- ✅ **Professional TTS**: Generates vocal assets using Gemini 2.5 TTS.
+- 💎 **Recursive Intelligence Loop**: We don't just generate audio; we use Gemini 3 to "loop-back" and audit the synthetic output of Gemini 2.5. This ensures every millisecond of synthetic voice is perfectly timestamped and labeled for training.
 
 **Human-in-the-Loop Features:**
-- ✅ **Live Segment Editing**: Edit transcriptions with inline text editing
-- ✅ **Custom Tagging**: Add/modify speaker labels and timestamps
-- ✅ **Smart ZIP Export**: Merges AI output with manual edits (zero data loss)
-- ✅ **JSON Export**: Structured output ready for training pipelines
-- ✅ **Multi-File Processing**: Batch upload with history tracking
+- ✅ **Live Segment Editing**: Edit transcriptions with inline inline UI.
+- ✅ **Custom Tagging**: Add speaker labels and forensic timestamps.
+- ✅ **Smart ZIP Export**: Merges AI output with manual edits (zero data loss).
 
 ### 👁️ **Vision Pro Studio**
 **AI-Powered Features:**
-- ✅ **Zero-Shot Object Detection**: Detect ANY concept (e.g., "Robot Owl", "Defective Chip", "Person in Red Jacket")
-- ✅ **Normalized Coordinates**: 0-1000 precision mapping for universal compatibility
-- ✅ **Confidence Scoring**: Each detection includes AI confidence percentage
-- ✅ **Structured Video Transcription**: Timestamped dialogue extraction from video
-- ✅ **Synthetic Video Generation**: Veo 3.1 integration for creating training videos from text prompts
+- ✅ **Zero-Shot Object Detection**: Detect ANY concept (e.g., "Defective Chip", "Person in Red Jacket").
+- ✅ **Normalized Coordinates**: 0-1000 precision mapping for universal compatibility.
+- ✅ **Confidence Scoring**: Forensic audit of every bounding box.
+- ✅ **Synthetic Video Generation**: Veo 3.1 integration for creating training videos. The generated video is uploaded back for Gemini 3 Flash to recognize objects and transcribe, creating a self-labeling cycle.
 
 **Human-in-the-Loop Features:**
-- ✅ **Manual Annotation Tools**: Draw custom bounding boxes with precision
-- ✅ **Editable Labels**: Click-to-rename any object label
-- ✅ **Dynamic Aspect Ratio**: Auto-adjusts to video dimensions (no drift!)
-- ✅ **Timeline Sync**: Jump to any timestamp by clicking annotations
-- ✅ **JSON Export**: HH:MM:SS formatted timestamps for easy integration
+- ✅ **Manual Annotation Tools**: Draw custom bounding boxes with precision.
+- ✅ **Dynamic Aspect Ratio**: Custom wrapper ensures bounding boxes stay glued to objects even if the browser is resized.
 
 ### 🖼️ **Image Generation Studio**
 **AI-Powered Features:**
-- ✅ **Photorealistic Synthesis**: Generate training images using Gemini 3 Pro
-- ✅ **Flux Model Integration**: Alternative generation pipeline for edge cases
-- ✅ **Concept Augmentation**: Create dataset variations ("same car in rain/snow/sunset")
-- ✅ **Batch Generation**: Queue multiple image generation tasks
+- ✅ **Photorealistic Synthesis**: Generate training images using Gemini 3 Pro.
+- ✅ **Concept Augmentation**: Create dataset variations ("same car in rain/snow/sunset") to reduce model bias.
 
 ### 📝 **NLP & PII Engine**
 **AI-Powered Features:**
-- ✅ **Named Entity Recognition**: 10+ entity types (PERSON, ORG, LOC, GPE, DATE, SSN, PHONE, EMAIL, etc.)
-- ✅ **PII Detection**: Instant identification for compliance auditing
-- ✅ **Sentiment Analysis**: Document-level mood classification
-- ✅ **Text Summarization**: Condensed insights from long documents
-- ✅ **Topic/Keyword Extraction**: Automatic tagging and categorization
-
-**Human-in-the-Loop Features:**
-- ✅ **Interactive Tagging**: Click-to-tag custom entities
-- ✅ **Index Self-Correction**: Forensic-level accuracy alignment
-- ✅ **Custom Entity Types**: Define your own classification schema
-- ✅ **Bulk Export**: JSON/CSV output for downstream processing
+- ✅ **Named Entity Recognition**: 10+ entity types (PERSON, ORG, LOC, GPE, DATE, etc.).
+- ✅ **PII Detection**: Instant identification for compliance and data privacy auditing.
+- 💎 **Diamond Schema Enforcement**: Every output is governed by a strict JSON schema, turning raw reasoning into "Diamond-Grade" structured indices ready for PyTorch/TensorFlow.
 
 ### 💰 **Financial Console**
-- ✅ **Real-Time Token Tracking**: See costs per request in milliseconds
-- ✅ **Batch API Integration**: 50% cost reduction on heavy workloads
-- ✅ **Economic Transparency**: Unit economics at your fingertips
-- ✅ **Cost Projections**: Estimate enterprise-scale processing costs
+- ✅ **Real-Time Token Tracking**: See costs per request in milliseconds.
+- ✅ **Batch API Integration**: 50% cost reduction on heavy datasets.
 
 ---
 
-## ⚙️ How we built it
-Vyonix is a **Next.js** application deployed on **Google Cloud Run**, powered by the **Gemini 3.0 ecosystem**.
+## ⚙️ How I built it
+Vyonix is a **Distributed Multimodal Intelligence Pipeline** built with **Next.js** and deployed on **Google Cloud Run**.
 
--   **The Brain**: We use **Gemini 3 Flash** via the Google AI SDK for its blazing speed and accurate timestamp generation.
--   **The Canvas**: A custom-built **React Video/Audio Player** that syncs with AI metadata. We had to build a custom "Coordinate Mapper" to translate Gemini's 1000x1000 coordinate space into responsive CSS (`top: 23.4%, left: 11.2%`).
--   **The Workflow**:
-    1.  User drags & drops a file.
-    2.  Check for "Human-in-the-Loop" needs (e.g., editing a bounding box label).
-    3.  **Batch API**: Heavy jobs are sent to the Batch API to cut costs by 50%.
-    4.  **Export**: Data is packaged into a standard JSON/ZIP format ready for PyTorch/TensorFlow.
+-   **The Forensics**: We used **Gemini 3 Flash** via the Google AI SDK as our primary "Data Auditor."
+-   **The Coordinate Mapper**: We built a custom mathematical engine to translate Gemini's 1000x1000 coordinate space into responsive CSS for the UI.
+-   **Unit Economics Layer**: Every API call goes through a custom middleware that calculates real-time token costs and switches to the **Gemini Batch API** for large workloads to ensure 50% cost savings.
 
 ---
 
-## 🏔️ Challenges we ran into
-1.  **The "Drifting Box" Problem**: 
-    Gemini provides coordinates normalized to `1000`. Displaying these on a responsive video player that scales with the window was a nightmare. We built a dynamic `Subject-Aware Aspect Ratio` wrapper that ensures the bounding box stays glued to the object, even if you resize the browser.
-
-2.  **Audio " hallucinations"**:
-    Early prompts gave us narrative summaries ("A man walked in"). We needed *data* ("TIMESTAMP: 00:04, SPEAKER: Man, TEXT: Hello"). We refined our system prompt to enforce a strict **JSON-only output schema**, forcing the model to act as a structured database rather than a creative writer.
+## 🏔️ Challenges I ran into
+1.  **The "Drifting Box" Problem**: Displaying coordinates on a responsive video player was complex. I built a `Subject-Aware Aspect Ratio` wrapper to ensure perfect alignment.
+2.  **Schema Drift**: Early models gave narrative summaries. I implemented strict **JSON-only enforcement**, forcing the model to act as a structured database rather than a writer.
 
 ---
 
-## 🏆 Accomplishments that we're proud of
--   **Deployment**: The app is live on Google Cloud Run, scaling to zero when not in use.
--   **Economic Viability**: By integrating the **Gemini Batch API**, we proved we can process 2,000+ hours of video for the cost of a few coffees, making enterprise-grade labelling accessible to startups.
--   **The "Vibe"**: We achieved a premium "Glassmorphism" UI that feels like a sci-fi tool, not a boring internal dashboard.
+## 🏆 Accomplishments that I am proud of
+-   **Recursive Intelligence**: Proving that Gemini 3 can audit the generations of other models (Veo/TTS) to create a perfect data labeling loop.
+-   **Economic Accessibility**: Proved enterprise-grade data engineering can cost the price of a few coffees using the Batch API.
 
 ---
 
-## 📚 What we learned
--   **"Vibe Coding" is real**: We used English (prompts) as our primary compilation target. 80% of our backend logic is just... asking Gemini nicely and precisely.
--   **Context is King**: Giving Gemini the *previous* 5 seconds of context improved transcription accuracy by 40%.
+## 📚 What I learnt
+-   **"Vibe Coding" is Engineering**: Programming in natural language (prompts) requires more precision than traditional code.
+-   **Context Windows are Assets**: Gemini's massive context allowed us to feed entire audio files for global consistency.
 
 ---
 
 ## 🚀 What's next for Vyonix Studio
--   **Video Intelligence 2.0**: Tracking objects *across* frames (action recognition).
--   **Marketplace**: A "HuggingFace for Data" where users can sell their cleaner (Vyonix-audited) datasets.
--   **Enterprise SSO**: Integrating with corporate identity providers for secure auditing.
+-   **Marketplace**: A "HuggingFace for Data" where users can sell audited datasets.
+-   **Action Recognition**: Moving from tracking objects to tracking behaviors across time.
 
 ---
 **Built with ❤️ using Gemini 3 & Google Cloud Run**
-[Try the Live App](https://vyonix-studio-service-vob67naxna-uc.a.run.app) | [View Code](https://github.com/inareshmatta/vyonix-studio)
+[Try the Live App](https://vyonix-studio-service-vob67naxna-uc.a.run.app) | [Near-Production Code Reference](https://github.com/inareshmatta/vyonix-ai-data-factory)
