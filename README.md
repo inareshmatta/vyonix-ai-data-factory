@@ -63,7 +63,7 @@ graph TD
         NLPProc["Token Corrector\n(Schema Enforcement)"]
     end
     
-    User <-> API
+    User <--> API
     API <-> GeminiFlash
     API <-> GeminiPro
     API <-> GeminiTTS
